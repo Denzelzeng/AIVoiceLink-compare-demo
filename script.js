@@ -1,13 +1,29 @@
 const DATA_URL = "data/comparison-data.json";
+const AUDIO_PATHS = {
+  source: "assets/audio/sample_voice_mandarin_male.wav",
+  clone: "assets/audio/translate_audio.wav"
+};
+const LATENCY_PROFILE = {
+  source: { startDelay: 0, completionLag: 0, output: "播放位置" },
+  globalvoice: { startDelay: 0.46, completionLag: 0.68, output: "首字 0.72s / 终字 3.5s" },
+  iflytek: { startDelay: 0.92, completionLag: 1.48, output: "首字 1.35s / 终字 5.2s" }
+};
 const state = {
   data: null,
   videos: [],
-  syncing: false
+  syncing: false,
+  latencyAudio: null,
+  cloneAudio: null,
+  latencyFrame: null,
+  cloneFrame: null,
+  latencyAutoPlayed: false
 };
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  setupAudioExperience();
+  setupDemoCardMotion();
   try {
     const response = await fetch(DATA_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`Unable to load ${DATA_URL}`);
@@ -33,6 +49,275 @@ function renderPage(data) {
   renderCapabilityMatrix(data);
   renderConclusion(data.conclusion);
   setupVideoSync();
+}
+
+function setupAudioExperience() {
+  hydrateSpeechTokens();
+  setupLatencyDemo();
+  setupCloneDemo();
+}
+
+function setupLatencyDemo() {
+  const button = document.querySelector("#playLatencyDemo");
+  const summary = document.querySelector("#latencySummary");
+  const rows = [...document.querySelectorAll("[data-line]")];
+  if (!button || !summary || rows.length === 0) return;
+
+  state.latencyAudio = new Audio(AUDIO_PATHS.source);
+  state.latencyAudio.preload = "auto";
+  resetLatencyRows(rows);
+
+  button.addEventListener("click", () => startLatencyDemo(rows, summary, button));
+  setupLatencyAutoPlay(rows, summary, button);
+}
+
+function hydrateSpeechTokens() {
+  document.querySelectorAll(".speech-text").forEach((line) => {
+    const text = line.dataset.copy || line.textContent.trim();
+    const isCjk = /[\u3400-\u9fff]/.test(text);
+    const tokens = isCjk
+      ? [...text]
+      : text.split(/\s+/).filter(Boolean);
+
+    line.innerHTML = tokens.map((token) => {
+      const gap = isCjk || /[.,!?;:]$/.test(token) ? "" : " has-gap";
+      return `<span class="speech-token${gap}">${token}</span>`;
+    }).join("");
+  });
+}
+
+function startLatencyDemo(rows, summary, button, options = {}) {
+  stopClonePlayback();
+  if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+  state.latencyAudio.pause();
+  state.latencyAudio.currentTime = 0;
+  resetLatencyRows(rows);
+  summary.textContent = options.auto ? "自动演示中" : "演示中";
+  button.classList.add("is-playing");
+  button.querySelector("span:last-child").textContent = "重新演示";
+
+  const startedAt = performance.now();
+  const playback = state.latencyAudio.play();
+  if (playback) {
+    playback.catch(() => {
+      if (options.auto) {
+        summary.textContent = "点击开启声音";
+      } else {
+        summary.textContent = "浏览器阻止播放";
+      }
+      button.classList.remove("is-playing");
+    });
+  }
+  runLatencyTimeline(rows, summary, button, startedAt);
+}
+
+function setupLatencyAutoPlay(rows, summary, button) {
+  const card = document.querySelector(".interpretation-card");
+  if (!card || !("IntersectionObserver" in window)) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const rect = entry.target.getBoundingClientRect();
+      const fullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      const fallbackVisible = rect.height > window.innerHeight && entry.intersectionRatio >= 0.82;
+      if (state.latencyAutoPlayed || (!fullyVisible && !fallbackVisible)) return;
+      state.latencyAutoPlayed = true;
+      startLatencyDemo(rows, summary, button, { auto: true });
+      observer.disconnect();
+    });
+  }, { threshold: [0.5, 0.82, 0.98, 1] });
+
+  observer.observe(card);
+}
+
+function resetLatencyRows(rows) {
+  rows.forEach((row) => {
+    const key = row.dataset.line;
+    setLineProgress(row, 0);
+    const output = row.querySelector("output");
+    if (output) output.textContent = LATENCY_PROFILE[key].output;
+  });
+}
+
+function runLatencyTimeline(rows, summary, button, startedAt) {
+  const fallbackDuration = 4.4;
+  const audioDuration = Number.isFinite(state.latencyAudio.duration) && state.latencyAudio.duration > 0
+    ? state.latencyAudio.duration
+    : fallbackDuration;
+  const totalRun = audioDuration + Math.max(...Object.values(LATENCY_PROFILE).map((item) => item.completionLag));
+
+  const tick = (now) => {
+    const elapsed = (now - startedAt) / 1000;
+
+    rows.forEach((row) => {
+      const profile = LATENCY_PROFILE[row.dataset.line];
+      const duration = audioDuration + profile.completionLag - profile.startDelay;
+      const progress = profile.startDelay === 0
+        ? elapsed / audioDuration
+        : (elapsed - profile.startDelay) / duration;
+      setLineProgress(row, progress);
+    });
+
+    if (elapsed < totalRun) {
+      state.latencyFrame = requestAnimationFrame(tick);
+      return;
+    }
+
+    rows.forEach((row) => setLineProgress(row, 1));
+    setLatencyFinalOutputs(rows);
+    summary.textContent = "全球语终字快 1.7s";
+    button.classList.remove("is-playing");
+  };
+
+  state.latencyFrame = requestAnimationFrame(tick);
+}
+
+function setLineProgress(row, progress) {
+  const safeProgress = Math.max(0, Math.min(1, progress));
+  const tokens = [...row.querySelectorAll(".speech-token")];
+  const activeCount = safeProgress <= 0 ? 0 : Math.ceil(safeProgress * tokens.length);
+  row.style.setProperty("--reveal", safeProgress.toFixed(3));
+  row.classList.toggle("is-speaking", safeProgress > 0 && safeProgress < 1);
+
+  tokens.forEach((token, index) => {
+    const isOn = index < activeCount || safeProgress >= 1;
+    token.classList.toggle("is-on", isOn);
+    token.classList.toggle("is-current", isOn && index === Math.max(0, activeCount - 1) && safeProgress < 1);
+  });
+}
+
+function setLatencyFinalOutputs(rows) {
+  const finalOutputs = {
+    source: "音频完成",
+    globalvoice: "质量 85.6 / 快 1.7s",
+    iflytek: "质量 80.0 / 慢 1.7s"
+  };
+
+  rows.forEach((row) => {
+    const output = row.querySelector("output");
+    if (output) output.textContent = finalOutputs[row.dataset.line];
+  });
+}
+
+function setupCloneDemo() {
+  const button = document.querySelector("#playCloneDemo");
+  const card = button ? button.closest(".advantage-card") : null;
+  const items = card ? [...card.querySelectorAll(".advantage-item")] : [];
+  const targetLine = document.querySelector('[data-line="globalvoice"]');
+  const latencyButton = document.querySelector("#playLatencyDemo");
+  const summary = document.querySelector("#latencySummary");
+  if (!button || !card || items.length === 0 || !targetLine) return;
+
+  state.cloneAudio = new Audio(AUDIO_PATHS.clone);
+  state.cloneAudio.preload = "auto";
+
+  button.addEventListener("click", () => {
+    if (state.cloneFrame) cancelAnimationFrame(state.cloneFrame);
+    if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+    state.cloneFrame = null;
+    state.latencyFrame = null;
+    if (state.latencyAudio) state.latencyAudio.pause();
+    if (latencyButton) {
+      latencyButton.classList.remove("is-playing");
+      latencyButton.querySelector("span:last-child").textContent = "重新演示";
+    }
+    if (summary) summary.textContent = "译文音频播放中";
+
+    state.cloneAudio.pause();
+    state.cloneAudio.currentTime = 0;
+    setLineProgress(targetLine, 0);
+    targetLine.querySelector("output").textContent = "译文播放中";
+    card.classList.add("is-playing");
+    button.classList.add("is-playing");
+    button.querySelector("span:last-child").textContent = "播放中";
+
+    const playback = state.cloneAudio.play();
+    if (playback) {
+      playback.catch(() => {
+        card.classList.remove("is-playing");
+        button.classList.remove("is-playing");
+        button.querySelector("span:last-child").textContent = "播放译文音频";
+        targetLine.querySelector("output").textContent = "播放失败";
+      });
+    }
+    runCloneHighlights(items, button, card, targetLine);
+  });
+
+  state.cloneAudio.addEventListener("ended", () => {
+    if (state.cloneFrame) cancelAnimationFrame(state.cloneFrame);
+    state.cloneFrame = null;
+    setLineProgress(targetLine, 1);
+    targetLine.querySelector("output").textContent = "译文完成";
+    if (summary) summary.textContent = "译文音频完成";
+    card.classList.remove("is-playing");
+    button.classList.remove("is-playing");
+    button.querySelector("span:last-child").textContent = "重播";
+    setActiveAdvantage(items, 2);
+  });
+}
+
+function stopClonePlayback() {
+  const button = document.querySelector("#playCloneDemo");
+  const card = button ? button.closest(".advantage-card") : null;
+
+  if (state.cloneFrame) cancelAnimationFrame(state.cloneFrame);
+  state.cloneFrame = null;
+  if (state.cloneAudio) {
+    state.cloneAudio.pause();
+    state.cloneAudio.currentTime = 0;
+  }
+  if (card) card.classList.remove("is-playing");
+  if (button) {
+    button.classList.remove("is-playing");
+    button.querySelector("span:last-child").textContent = "播放译文音频";
+  }
+}
+
+function runCloneHighlights(items, button, card, targetLine) {
+  const tick = () => {
+    const duration = Number.isFinite(state.cloneAudio.duration) && state.cloneAudio.duration > 0
+      ? state.cloneAudio.duration
+      : 6;
+    const progress = Math.min(0.999, state.cloneAudio.currentTime / duration);
+    setLineProgress(targetLine, progress);
+    targetLine.querySelector("output").textContent = "译文播放中";
+    setActiveAdvantage(items, Math.floor(progress * items.length));
+
+    if (!state.cloneAudio.paused && !state.cloneAudio.ended) {
+      state.cloneFrame = requestAnimationFrame(tick);
+      return;
+    }
+
+    card.classList.remove("is-playing");
+    button.classList.remove("is-playing");
+  };
+
+  state.cloneFrame = requestAnimationFrame(tick);
+}
+
+function setActiveAdvantage(items, activeIndex) {
+  items.forEach((item, index) => {
+    item.classList.toggle("active", index === activeIndex);
+  });
+}
+
+function setupDemoCardMotion() {
+  const cards = [...document.querySelectorAll("[data-demo-card]")];
+  if (cards.length === 0) return;
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.28 });
+    cards.forEach((card) => observer.observe(card));
+    return;
+  }
+
+  cards.forEach((card) => card.classList.add("is-visible"));
 }
 
 function vendorById(data, id) {

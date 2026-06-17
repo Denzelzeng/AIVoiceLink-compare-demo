@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>全球语-会译通 vs 科大讯飞 | 竞品对比</title>
   <meta name="description" content="全球语-会译通与科大讯飞在同传、识别、翻译质量、延迟和会议工作流上的竞品对比演示页。">
-  <link rel="icon" href="data:,">
+  <link rel="icon" type="image/svg+xml" href="images/ai_voicelink_logo.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,6 +16,7 @@
     </a>
     <nav class="nav" aria-label="页面导航">
       <a href="#video">视频对比</a>
+      <a href="#latency-demo">同传延迟</a>
       <a href="#metrics">指标图表</a>
       <a href="#capabilities">能力矩阵</a>
       <a href="#conclusion">结论</a>
@@ -71,6 +72,92 @@
         <img src="images/iflytek-logo.png" alt="科大讯飞">
         <span>iFLYTEK / 讯飞听见 / 讯飞同传</span>
       </article>
+    </section>
+
+    <section id="latency-demo" class="section-card latency-demo-section">
+      <div class="section-title latency-title">
+        <div>
+          <p class="eyebrow">Live Interpretation Benchmark</p>
+          <h2>感知延迟差异</h2>
+        </div>
+      </div>
+
+      <div class="latency-bento">
+        <article class="latency-card interpretation-card" data-demo-card>
+          <header class="demo-card-head">
+            <button type="button" class="audio-action primary" id="playLatencyDemo" aria-label="开始同传延迟演示">
+              <span class="play-glyph" aria-hidden="true"></span>
+              <span>开始演示</span>
+            </button>
+            <div class="latency-summary" id="latencySummary">待播放</div>
+          </header>
+
+          <div class="speech-board" aria-label="同传延迟字幕演示">
+            <div class="speech-row source-row" data-line="source" style="--reveal:0">
+              <div class="speech-meta">
+                <span>原文</span>
+                <strong>Mandarin source</strong>
+              </div>
+              <p class="speech-text" data-copy="这是一段测试音频，用于展示产品性能和使用体验。">这是一段测试音频，用于展示产品性能和使用体验。</p>
+              <output>播放位置</output>
+            </div>
+
+            <div class="speech-row globalvoice-row" data-line="globalvoice" style="--reveal:0">
+              <div class="speech-meta">
+                <span>全球语</span>
+                <strong>AI Voicelink</strong>
+              </div>
+              <p class="speech-text" data-copy="This is a test audio. It's used to show the product's performance and user experience.">This is a test audio. It's used to show the product's performance and user experience.</p>
+              <output>首字 0.72s</output>
+            </div>
+
+            <div class="speech-row iflytek-row" data-line="iflytek" style="--reveal:0">
+              <div class="speech-meta">
+                <span>讯飞</span>
+                <strong>iFLYTEK</strong>
+              </div>
+              <p class="speech-text" data-copy="This is a test audio. It's used to show the product's performance and user experience.">This is a test audio. It's used to show the product's performance and user experience.</p>
+              <output>首字 1.35s</output>
+            </div>
+          </div>
+        </article>
+
+        <article class="latency-card advantage-card" data-demo-card>
+          <header class="demo-card-head">
+            <div>
+              <p class="eyebrow">Product Edge</p>
+              <h3>多维度优势</h3>
+              <p class="audio-hint">点击播放译文音频</p>
+            </div>
+            <button type="button" class="audio-action compact" id="playCloneDemo" aria-label="播放翻译后音频">
+              <span class="play-glyph" aria-hidden="true"></span>
+              <span>播放译文音频</span>
+            </button>
+          </header>
+
+          <div class="voice-visual" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+
+          <div class="advantage-stack">
+            <section class="advantage-item active">
+              <span>01</span>
+              <strong>&lt;1s 低时延</strong>
+              <p>首字快速返回，主持人与听众不会被字幕节奏打断。</p>
+            </section>
+            <section class="advantage-item">
+              <span>02</span>
+              <strong>人声复刻</strong>
+              <p>播放译文音频时保留接近真人的音色与语气，适合会议转述和接待场景。</p>
+            </section>
+            <section class="advantage-item">
+              <span>03</span>
+              <strong>智能断句</strong>
+              <p>按语义块输出译文，减少长句堆叠，让字幕更易读。</p>
+            </section>
+          </div>
+        </article>
+      </div>
     </section>
 
     <section id="video" class="section-card video-section">
