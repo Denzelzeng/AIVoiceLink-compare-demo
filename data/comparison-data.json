@@ -1,0 +1,219 @@
+{
+  "meta": {
+    "reportTitle": "全球语-会译通 vs 科大讯飞",
+    "subtitle": "AI Voicelink - Conference 竞品对比演示页",
+    "sampleSize": "统一测试样本",
+    "updatedAt": "2026-06-16",
+    "sources": [
+      "全球语讯飞同传对比.md",
+      "https://www.iflyrec.com/"
+    ]
+  },
+  "vendors": [
+    {
+      "id": "globalvoice",
+      "name": "全球语-会译通",
+      "shortName": "全球语",
+      "logo": "images/ai_voicelink_logo_with_name.svg",
+      "color": "#1769e0",
+      "accent": "#10b981",
+      "rank": "综合领先",
+      "summary": "译文质量、最终响应速度和完整处理效率均领先，更适合高要求会议、接待、咨询和跨语言沟通场景。",
+      "video": "videos/globalvoice-test-01.mp4"
+    },
+    {
+      "id": "iflytek",
+      "name": "科大讯飞",
+      "shortName": "讯飞",
+      "logo": "images/iflytek-logo.png",
+      "color": "#475569",
+      "accent": "#f97316",
+      "rank": "综合第 3 名",
+      "summary": "翻译质量处于第二梯队，但完整处理时间和实时处理系数相对落后；官网产品线覆盖听见、同传、译制等多个入口。",
+      "video": "videos/iflytek-test-01.mp4"
+    }
+  ],
+  "kpis": [
+    {
+      "key": "quality",
+      "label": "综合质量",
+      "unit": "分",
+      "better": "higher",
+      "globalvoice": 85.6,
+      "iflytek": 80.0,
+      "description": "对译文整体可用性的综合评价"
+    },
+    {
+      "key": "semantic",
+      "label": "语义准确",
+      "unit": "分",
+      "better": "higher",
+      "globalvoice": 87.7,
+      "iflytek": 82.2,
+      "description": "是否完整、准确表达原文意思"
+    },
+    {
+      "key": "naturalness",
+      "label": "表达自然",
+      "unit": "分",
+      "better": "higher",
+      "globalvoice": 88.9,
+      "iflytek": 81.5,
+      "description": "是否符合目标语言表达习惯"
+    },
+    {
+      "key": "tone",
+      "label": "语气匹配",
+      "unit": "分",
+      "better": "higher",
+      "globalvoice": 86.1,
+      "iflytek": 80.4,
+      "description": "是否保留原文语气、礼貌程度和场景"
+    },
+    {
+      "key": "localization",
+      "label": "本地化适配",
+      "unit": "分",
+      "better": "higher",
+      "globalvoice": 85.6,
+      "iflytek": 79.0,
+      "description": "专有名词、文化表达和场景用语处理"
+    },
+    {
+      "key": "similarity",
+      "label": "参考相似度",
+      "unit": "",
+      "better": "higher",
+      "globalvoice": 39.7,
+      "iflytek": 37.5,
+      "description": "与参考译文在字词层面的接近程度"
+    },
+    {
+      "key": "firstFinal",
+      "label": "最终响应时间",
+      "unit": "秒",
+      "better": "lower",
+      "globalvoice": 3.5,
+      "iflytek": 5.2,
+      "description": "从开始处理到首个最终译文返回"
+    },
+    {
+      "key": "fullProcess",
+      "label": "完整处理时间",
+      "unit": "秒",
+      "better": "lower",
+      "globalvoice": 6.6,
+      "iflytek": 7.9,
+      "description": "完成单句识别、翻译和会话处理的平均总时间"
+    },
+    {
+      "key": "realtimeFactor",
+      "label": "实时处理系数",
+      "unit": "倍",
+      "better": "lower",
+      "globalvoice": 1.25,
+      "iflytek": 1.37,
+      "description": "完整处理时间与原始音频时长的比例"
+    },
+    {
+      "key": "successRate",
+      "label": "成功率",
+      "unit": "%",
+      "better": "higher",
+      "globalvoice": 100,
+      "iflytek": 100,
+      "description": "接口调用成功比率"
+    }
+  ],
+  "capabilities": [
+    {
+      "group": "实时会议体验",
+      "items": [
+        {
+          "name": "同传 + 会议纪要一站式工作流",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "全球语集中在会译通平台；讯飞官网呈现听见、同传等多个产品入口。"
+        },
+        {
+          "name": "H5 即开即用",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "适合临时会议、外部嘉宾和轻量部署。"
+        },
+        {
+          "name": "左右视频同屏评测",
+          "globalvoice": "yes",
+          "iflytek": "yes",
+          "note": "本页预留双视频位，支持后续嵌入同步播放演示。"
+        }
+      ]
+    },
+    {
+      "group": "AI 语音能力",
+      "items": [
+        {
+          "name": "会议场景人声克隆展示",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "页面突出全球语后续可演示能力；讯飞译制官网入口提到配音/声音克隆，会议同传入口未作为本页核心能力呈现。"
+        },
+        {
+          "name": "实时识别与翻译低延迟",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "本轮量化测试中全球语最终响应时间 3.5 秒，讯飞 5.2 秒。"
+        },
+        {
+          "name": "译文自然度与本地化",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "全球语表达自然 88.9 分、本地化适配 85.6 分，均高于讯飞。"
+        }
+      ]
+    },
+    {
+      "group": "交付与运营",
+      "items": [
+        {
+          "name": "统一入口管理会议资产",
+          "globalvoice": "yes",
+          "iflytek": "partial",
+          "note": "面向会议前、中、后链路，减少用户在多个产品之间切换。"
+        },
+        {
+          "name": "适合接待、咨询、跨境会议复用",
+          "globalvoice": "yes",
+          "iflytek": "yes",
+          "note": "两者均覆盖跨语言沟通场景，全球语在本轮指标上更优。"
+        }
+      ]
+    }
+  ],
+  "demoScript": [
+    {
+      "step": "同句录屏",
+      "globalvoice": "快速生成最终译文，字幕表达更自然",
+      "iflytek": "最终译文返回较慢，语义和表达存在更多偏差"
+    },
+    {
+      "step": "会议纪要联动",
+      "globalvoice": "同传、转写、摘要在同一平台闭环",
+      "iflytek": "听见、同传等能力入口相对分散"
+    },
+    {
+      "step": "外部嘉宾加入",
+      "globalvoice": "H5 链接即开即用",
+      "iflytek": "需根据具体产品入口完成访问与配置"
+    }
+  ],
+  "conclusion": {
+    "headline": "结论：全球语更适合高质量、低延迟、全流程会议翻译场景",
+    "points": [
+      "全球语综合质量 85.6 分，高于讯飞 80.0 分；五个质量维度均领先。",
+      "全球语最终响应时间 3.5 秒，较讯飞 5.2 秒更快，现场感知差异明显。",
+      "全球语把同传、转写、纪要和后续沉淀集中在会译通平台，更适合企业会议的连续工作流。",
+      "讯飞具备较完整的语音办公产品矩阵，但面向会译通这类一站式会议场景时，产品入口和能力组合需要更多切换。"
+    ]
+  }
+}

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>全球语-会译通 vs 科大讯飞 | 竞品对比</title>
+  <meta name="description" content="全球语-会译通与科大讯飞在同传、识别、翻译质量、延迟和会议工作流上的竞品对比演示页。">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="返回顶部">
+      <img src="images/ai_voicelink_logo.svg" alt="AI Voicelink">
+      <span>全球语 AI Voicelink | 会译通 Conference</span>
+    </a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#video">视频对比</a>
+      <a href="#metrics">指标图表</a>
+      <a href="#capabilities">能力矩阵</a>
+      <a href="#conclusion">结论</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero section-band">
+      <div class="hero-copy">
+        <p class="eyebrow">Competitive Benchmark · Conference AI</p>
+        <h1>全球语-会译通 对比 科大讯飞</h1>
+        <p class="hero-lead">围绕会议同传最关键的质量、延迟、完整处理效率和产品工作流，展示 AI Voicelink - Conference 在企业跨语言会议场景中的优势。</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#video">查看演示对比</a>
+          <a class="secondary-action" href="#metrics">查看量化指标</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-label="核心指标摘要">
+        <div class="glass-panel score-panel">
+          <div class="panel-head">
+            <span>综合质量</span>
+            <strong>+5.6</strong>
+          </div>
+          <div class="score-ring" style="--score: 85.6">
+            <span>85.6</span>
+            <small>全球语</small>
+          </div>
+          <div class="mini-bars">
+            <div><span>全球语</span><i style="--w: 85.6%"></i></div>
+            <div><span>讯飞</span><i class="orange" style="--w: 80%"></i></div>
+          </div>
+        </div>
+        <div class="glass-panel latency-panel">
+          <span>最终响应</span>
+          <strong>3.5s</strong>
+          <small>比讯飞快 1.7 秒</small>
+        </div>
+        <div class="glass-panel workflow-panel">
+          <span>会议闭环</span>
+          <strong>同传 + 纪要</strong>
+          <small>统一入口，H5 即开即用</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="logo-strip" aria-label="对比产品">
+      <article>
+        <img src="images/ai_voicelink_logo_with_name.svg" alt="全球语-会译通">
+        <span>AI Voicelink - Conference</span>
+      </article>
+      <div class="versus">VS</div>
+      <article>
+        <img src="images/iflytek-logo.png" alt="科大讯飞">
+        <span>iFLYTEK / 讯飞听见 / 讯飞同传</span>
+      </article>
+    </section>
+
+    <section id="video" class="section-card video-section">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Side-by-side Demo</p>
+          <h2>同一句话，同一场景，直接看差异</h2>
+        </div>
+        <p>视频文件先预留为 `videos/globalvoice-test-01.mp4` 和 `videos/iflytek-test-01.mp4`。放入文件后，本区可同步播放、暂停和重置进度。</p>
+      </div>
+      <div class="video-toolbar">
+        <button type="button" id="syncPlay">同步播放</button>
+        <button type="button" id="syncPause">暂停</button>
+        <button type="button" id="syncReset">重置</button>
+        <label><input type="checkbox" id="lockSync" checked> 锁定进度</label>
+      </div>
+      <div class="video-grid" id="videoGrid"></div>
+      <div class="demo-script" id="demoScript"></div>
+    </section>
+
+    <section id="metrics" class="section-card">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Quantitative Results</p>
+          <h2>核心指标：质量更高，响应更快，处理更接近实时</h2>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="charts-grid">
+        <article class="chart-card wide">
+          <div class="chart-head">
+            <h3>五维翻译质量雷达</h3>
+            <span>高值更优</span>
+          </div>
+          <div id="radarChart" class="radar-chart"></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <h3>质量维度差距</h3>
+            <span>全球语领先值</span>
+          </div>
+          <div id="gapChart" class="bar-chart"></div>
+        </article>
+        <article class="chart-card">
+          <div class="chart-head">
+            <h3>速度与效率</h3>
+            <span>低值更优</span>
+          </div>
+          <div id="speedChart" class="bar-chart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Data Table</p>
+          <h2>指标明细表</h2>
+        </div>
+        <p>所有结果基于同一批测试样本和统一评估口径；成功率一致时，差异主要来自质量与响应效率。</p>
+      </div>
+      <div class="table-wrap">
+        <table id="metricTable"></table>
+      </div>
+    </section>
+
+    <section id="capabilities" class="section-card">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Product Capability</p>
+          <h2>产品能力矩阵：会议全流程是否顺畅闭环</h2>
+        </div>
+        <p>本区把“同传表现”扩展到真实会议工作流：从嘉宾进入、实时字幕翻译，到会后纪要沉淀。</p>
+      </div>
+      <div id="capabilityMatrix" class="capability-matrix"></div>
+    </section>
+
+    <section class="section-band workflow-section">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Meeting Workflow</p>
+          <h2>会译通的一站式会议链路</h2>
+        </div>
+        <p>围绕企业会议，把实时翻译和会后资产沉淀放在同一条链路中，降低现场操作复杂度。</p>
+      </div>
+      <div class="workflow-map">
+        <article><b>01</b><strong>H5 入会</strong><span>外部嘉宾即开即用</span></article>
+        <article><b>02</b><strong>实时识别</strong><span>字幕滚动，低延迟返回</span></article>
+        <article><b>03</b><strong>多语翻译</strong><span>自然表达与本地化适配</span></article>
+        <article><b>04</b><strong>会议纪要</strong><span>转写、摘要、行动项沉淀</span></article>
+      </div>
+    </section>
+
+    <section id="conclusion" class="section-card conclusion-card">
+      <div class="conclusion-layout">
+        <div>
+          <p class="eyebrow">Conclusion</p>
+          <h2 id="conclusionHeadline">结论</h2>
+          <ul id="conclusionPoints"></ul>
+        </div>
+        <aside>
+          <span>推荐演示重点</span>
+          <strong>同句录屏 + 同屏字幕 + 会后纪要</strong>
+          <p>用同一句话同时测试两套系统，直接展示译文质量、最终响应时间和会议纪要闭环。</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Data from self test</span>
+    <span>Competitor reference: iflyrec.com official product navigation</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
