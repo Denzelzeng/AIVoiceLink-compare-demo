@@ -12,7 +12,6 @@ const state = {
   data: null,
   videos: [],
   syncing: false,
-  videoAutoPlayed: false,
   latencyAudio: null,
   cloneAudio: null,
   latencyFrame: null,
@@ -50,7 +49,6 @@ function renderPage(data) {
   renderCapabilityMatrix(data);
   renderConclusion(data.conclusion);
   setupVideoSync();
-  setupVideoEndAutoPlay();
 }
 
 function setupAudioExperience() {
@@ -358,7 +356,7 @@ function renderVideos(data) {
         <div class="video-placeholder">
           <div>
             <strong>${vendor.shortName} 演示视频</strong>
-            <small>${vendor.video}</small>
+            <small>点击按钮播放</small>
           </div>
         </div>
       </div>
@@ -611,45 +609,12 @@ function setupVideoSync() {
   });
 }
 
-function setupVideoEndAutoPlay() {
-  const section = document.querySelector("#video");
-  const videoMode = document.querySelector("#videoMode");
-  if (!section || state.videos.length === 0) return;
-
-  const maybeAutoPlay = () => {
-    if (state.videoAutoPlayed) return;
-    const rect = section.getBoundingClientRect();
-    const reachedSectionEnd = rect.bottom <= window.innerHeight * 0.96 && rect.bottom > 0;
-    if (!reachedSectionEnd) return;
-    state.videoAutoPlayed = true;
-    startVideoPlayback({ muted: true });
-    if (videoMode) videoMode.textContent = "已静音自动播放";
-    window.removeEventListener("scroll", maybeAutoPlay);
-    window.removeEventListener("resize", maybeAutoPlay);
-    if (observer) observer.disconnect();
-  };
-
-  let observer = null;
-  if ("IntersectionObserver" in window) {
-    observer = new IntersectionObserver(() => maybeAutoPlay(), { threshold: [0.55, 0.82, 1] });
-    observer.observe(section);
-  }
-
-  window.addEventListener("scroll", maybeAutoPlay, { passive: true });
-  window.addEventListener("resize", maybeAutoPlay);
-  maybeAutoPlay();
-}
-
-function startVideoPlayback(options = {}) {
+function startVideoPlayback() {
   state.videos.forEach((video) => {
-    if (options.muted) {
-      video.muted = true;
-      video.defaultMuted = true;
-    }
     if (video.ended) video.currentTime = 0;
     const result = video.play();
     if (result) {
-      result.catch(() => setVideoCardState(video, options.muted ? "点击播放" : "播放受阻"));
+      result.catch(() => setVideoCardState(video, "播放受阻"));
     }
   });
 }
