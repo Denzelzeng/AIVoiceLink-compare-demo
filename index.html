@@ -166,13 +166,13 @@
           <p class="eyebrow">Side-by-side Demo</p>
           <h2>同一句话，同一场景，直接看差异</h2>
         </div>
-        <p>视频文件先预留为 `videos/globalvoice-test-01.mp4` 和 `videos/iflytek-test-01.mp4`。放入文件后，本区可同步播放、暂停和重置进度。</p>
       </div>
       <div class="video-toolbar">
         <button type="button" id="syncPlay">同步播放</button>
         <button type="button" id="syncPause">暂停</button>
         <button type="button" id="syncReset">重置</button>
-        <label><input type="checkbox" id="lockSync" checked> 锁定进度</label>
+        <label><input type="checkbox" id="lockSync" checked> 锁定起点</label>
+        <span class="video-mode" id="videoMode">滚动到底部后静音自动播放</span>
       </div>
       <div class="video-grid" id="videoGrid"></div>
       <div class="demo-script" id="demoScript"></div>

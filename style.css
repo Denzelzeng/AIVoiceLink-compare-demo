@@ -423,6 +423,78 @@ h1 {
   font-weight: 700;
 }
 
+.video-section {
+  position: relative;
+  overflow: hidden;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(23, 105, 224, 0.15), transparent 32%),
+    radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.13), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 255, 0.78));
+}
+
+.video-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: radial-gradient(circle at 50% 14%, #000 0 28%, transparent 72%);
+  pointer-events: none;
+}
+
+.video-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+.video-section .section-title {
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.video-section h2 {
+  max-width: 780px;
+  color: #081b3f;
+  font-size: clamp(28px, 3.8vw, 44px);
+  letter-spacing: 0;
+}
+
+.video-toolbar {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.video-toolbar button {
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.video-toolbar button:hover,
+.video-toolbar button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(23, 105, 224, 0.14);
+}
+
+.video-mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #0f3d8a;
+  background: #eef4ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .latency-demo-section {
   position: relative;
   overflow: hidden;
@@ -806,14 +878,34 @@ h1 {
 .video-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 20px;
 }
 
 .video-card {
+  position: relative;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 20px;
+  background: linear-gradient(180deg, #0f172a, #111827);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+  transform: translateY(0);
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+}
+
+.video-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--teal), var(--orange));
+  opacity: 0.86;
+  z-index: 2;
+}
+
+.video-card:hover {
+  border-color: rgba(23, 105, 224, 0.3);
+  box-shadow: 0 30px 76px rgba(15, 23, 42, 0.22);
+  transform: translateY(-3px);
 }
 
 .video-card-head {
@@ -821,9 +913,17 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 16px 18px 14px;
   color: #fff;
-  background: rgba(15, 23, 42, 0.9);
+  background:
+    radial-gradient(circle at 0 0, rgba(23, 105, 224, 0.28), transparent 42%),
+    rgba(15, 23, 42, 0.94);
+}
+
+.video-brand {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
 
 .video-card-head img {
@@ -833,15 +933,27 @@ h1 {
   filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.24));
 }
 
-.video-card-head span {
+.video-brand span {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
   font-weight: 800;
 }
 
+.video-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .video-shell {
   position: relative;
   aspect-ratio: 16 / 9;
+  overflow: hidden;
   background:
     linear-gradient(135deg, rgba(23, 105, 224, 0.26), transparent),
     #111827;
@@ -852,6 +964,16 @@ h1 {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transform: scale(1);
+  transition: transform 700ms ease, filter 240ms ease;
+}
+
+.video-card:hover .video-shell video {
+  transform: scale(1.025);
+}
+
+.video-card.is-ended .video-shell video {
+  filter: saturate(0.85) brightness(0.82);
 }
 
 .video-placeholder {
@@ -1358,6 +1480,15 @@ tr:last-child td {
   .kpi-grid,
   .workflow-map {
     grid-template-columns: 1fr;
+  }
+
+  .video-section .section-title {
+    align-items: flex-start;
+  }
+
+  .video-toolbar {
+    width: 100%;
+    border-radius: 18px;
   }
 
   .interpretation-card,

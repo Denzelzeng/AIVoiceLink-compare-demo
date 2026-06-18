@@ -12,6 +12,7 @@ const state = {
   data: null,
   videos: [],
   syncing: false,
+  videoAutoPlayed: false,
   latencyAudio: null,
   cloneAudio: null,
   latencyFrame: null,
@@ -49,6 +50,7 @@ function renderPage(data) {
   renderCapabilityMatrix(data);
   renderConclusion(data.conclusion);
   setupVideoSync();
+  setupVideoEndAutoPlay();
 }
 
 function setupAudioExperience() {
@@ -341,10 +343,13 @@ function getAdvantage(metric) {
 function renderVideos(data) {
   const grid = document.querySelector("#videoGrid");
   grid.innerHTML = data.vendors.map((vendor) => `
-    <article class="video-card">
+    <article class="video-card" data-video-card="${vendor.id}">
       <header class="video-card-head">
-        <img src="${vendor.logo}" alt="${vendor.name}">
-        <span>${vendor.rank}</span>
+        <div class="video-brand">
+          <img src="${vendor.logo}" alt="${vendor.name}">
+          <span>${vendor.name}</span>
+        </div>
+        <span class="video-badge">${vendor.rank}</span>
       </header>
       <div class="video-shell">
         <video preload="none" controls playsinline data-vendor="${vendor.id}">
@@ -352,7 +357,7 @@ function renderVideos(data) {
         </video>
         <div class="video-placeholder">
           <div>
-            <strong>${vendor.shortName} 演示视频位</strong>
+            <strong>${vendor.shortName} 演示视频</strong>
             <small>${vendor.video}</small>
           </div>
         </div>
@@ -362,14 +367,33 @@ function renderVideos(data) {
 
   state.videos = [...grid.querySelectorAll("video")];
   state.videos.forEach((video) => {
-    const placeholder = video.parentElement.querySelector(".video-placeholder");
+    const card = video.closest(".video-card");
+    const placeholder = card.querySelector(".video-placeholder");
     video.addEventListener("loadeddata", () => {
       placeholder.style.display = "none";
     });
     video.addEventListener("error", () => {
       placeholder.style.display = "grid";
+      setVideoCardState(video, "加载失败");
     });
+    video.addEventListener("play", () => setVideoCardState(video, video.muted ? "静音播放中" : "播放中"));
+    video.addEventListener("pause", () => {
+      if (!video.ended) setVideoCardState(video, "已暂停");
+    });
+    video.addEventListener("ended", () => {
+      setVideoCardState(video, "已结束");
+    });
+    video.addEventListener("waiting", () => setVideoCardState(video, "缓冲中"));
   });
+}
+
+function setVideoCardState(video, label) {
+  const card = video.closest(".video-card");
+  if (!card) return;
+  const status = card.querySelector(".video-status");
+  if (status) status.textContent = label;
+  card.classList.toggle("is-playing", !video.paused && !video.ended);
+  card.classList.toggle("is-ended", video.ended);
 }
 
 function renderDemoScript(items) {
@@ -553,44 +577,103 @@ function setupVideoSync() {
   const pauseButton = document.querySelector("#syncPause");
   const resetButton = document.querySelector("#syncReset");
   const lockSync = document.querySelector("#lockSync");
+  const videoMode = document.querySelector("#videoMode");
 
   playButton.addEventListener("click", () => {
-    state.videos.forEach((video) => {
-      const result = video.play();
-      if (result) result.catch(() => {});
-    });
+    startVideoPlayback();
+    if (videoMode) videoMode.textContent = "同步播放中";
   });
 
   pauseButton.addEventListener("click", () => {
     state.videos.forEach((video) => video.pause());
+    if (videoMode) videoMode.textContent = "已暂停";
   });
 
   resetButton.addEventListener("click", () => {
     state.videos.forEach((video) => {
       video.pause();
       video.currentTime = 0;
+      setVideoCardState(video, "待播放");
     });
+    if (videoMode) videoMode.textContent = "已重置";
   });
 
   state.videos.forEach((video) => {
     video.addEventListener("seeked", () => {
       if (!lockSync.checked || state.syncing) return;
-      state.syncing = true;
-      state.videos.forEach((other) => {
-        if (other !== video && Math.abs(other.currentTime - video.currentTime) > 0.2) {
-          other.currentTime = video.currentTime;
-        }
-      });
-      state.syncing = false;
+      syncVideoPeers(video, 0.2);
     });
 
     video.addEventListener("timeupdate", () => {
-      if (!lockSync.checked || state.syncing || video.paused) return;
-      const driftTarget = state.videos.find((other) => other !== video && Math.abs(other.currentTime - video.currentTime) > 0.45);
-      if (!driftTarget) return;
-      state.syncing = true;
-      driftTarget.currentTime = video.currentTime;
-      state.syncing = false;
+      if (!lockSync.checked || state.syncing || video.paused || video.ended) return;
+      syncVideoPeers(video, 0.45);
     });
   });
+}
+
+function setupVideoEndAutoPlay() {
+  const section = document.querySelector("#video");
+  const videoMode = document.querySelector("#videoMode");
+  if (!section || state.videos.length === 0) return;
+
+  const maybeAutoPlay = () => {
+    if (state.videoAutoPlayed) return;
+    const rect = section.getBoundingClientRect();
+    const reachedSectionEnd = rect.bottom <= window.innerHeight * 0.96 && rect.bottom > 0;
+    if (!reachedSectionEnd) return;
+    state.videoAutoPlayed = true;
+    startVideoPlayback({ muted: true });
+    if (videoMode) videoMode.textContent = "已静音自动播放";
+    window.removeEventListener("scroll", maybeAutoPlay);
+    window.removeEventListener("resize", maybeAutoPlay);
+    if (observer) observer.disconnect();
+  };
+
+  let observer = null;
+  if ("IntersectionObserver" in window) {
+    observer = new IntersectionObserver(() => maybeAutoPlay(), { threshold: [0.55, 0.82, 1] });
+    observer.observe(section);
+  }
+
+  window.addEventListener("scroll", maybeAutoPlay, { passive: true });
+  window.addEventListener("resize", maybeAutoPlay);
+  maybeAutoPlay();
+}
+
+function startVideoPlayback(options = {}) {
+  state.videos.forEach((video) => {
+    if (options.muted) {
+      video.muted = true;
+      video.defaultMuted = true;
+    }
+    if (video.ended) video.currentTime = 0;
+    const result = video.play();
+    if (result) {
+      result.catch(() => setVideoCardState(video, options.muted ? "点击播放" : "播放受阻"));
+    }
+  });
+}
+
+function syncVideoPeers(source, tolerance) {
+  if (source.ended) return;
+  const sourceTime = source.currentTime;
+  state.syncing = true;
+  state.videos.forEach((target) => {
+    if (target === source || target.ended) return;
+    const nextTime = clampVideoTime(target, sourceTime);
+    if (Math.abs(target.currentTime - nextTime) > tolerance) {
+      target.currentTime = nextTime;
+    }
+  });
+  state.syncing = false;
+}
+
+function getVideoDuration(video) {
+  return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+}
+
+function clampVideoTime(video, time) {
+  const duration = getVideoDuration(video);
+  if (!duration) return Math.max(0, time);
+  return Math.max(0, Math.min(time, Math.max(0, duration - 0.08)));
 }
