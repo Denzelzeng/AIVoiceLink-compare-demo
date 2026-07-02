@@ -1,4 +1,4 @@
-dev.ps1
+*.ps1
 .agents/
 skills-lock.json
 node_modules/
@@ -6,7 +6,6 @@ package-lock.json
 
 .env
 *.env
-backend/backend_dev.ps1
 *.log
 backend/ast_live_client.py
 backend/livetranslate_client.py
