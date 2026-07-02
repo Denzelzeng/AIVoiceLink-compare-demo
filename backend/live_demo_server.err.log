@@ -1,0 +1,18 @@
+connection handler failed
+TimeoutError: timed out while closing connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\ProgramData\miniforge3\envs\aivoicelink\Lib\site-packages\websockets\asyncio\server.py", line 376, in conn_handler
+    await self.handler(connection)
+  File "D:\Users\chien\Downloads\TRY\compare-demo\backend\live_demo_server.py", line 698, in handle_client
+    await session.run()
+  File "D:\Users\chien\Downloads\TRY\compare-demo\backend\live_demo_server.py", line 672, in run
+    async for raw_message in self.websocket:
+  File "D:\ProgramData\miniforge3\envs\aivoicelink\Lib\site-packages\websockets\asyncio\connection.py", line 244, in __aiter__
+    yield await self.recv()
+          ^^^^^^^^^^^^^^^^^
+  File "D:\ProgramData\miniforge3\envs\aivoicelink\Lib\site-packages\websockets\asyncio\connection.py", line 324, in recv
+    raise self.protocol.close_exc from self.recv_exc
+websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received

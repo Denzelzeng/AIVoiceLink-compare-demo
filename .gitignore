@@ -3,3 +3,12 @@ dev.ps1
 skills-lock.json
 node_modules/
 package-lock.json
+
+.env
+*.env
+backend/backend_dev.ps1
+.log
+backend/ast_live_client.py
+backend/livetranslate_client.py
+backend/main_ast.py
+backend/main.py

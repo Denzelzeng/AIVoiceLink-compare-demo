@@ -1,4 +1,5 @@
 const DATA_URL = "data/comparison-data.json";
+const LIVE_WS_URL = "ws://127.0.0.1:8765";
 const AUDIO_PATHS = {
   source: "assets/audio/sample_voice_mandarin_male.wav",
   clone: "assets/audio/translate_audio.wav"
@@ -16,13 +17,37 @@ const state = {
   cloneAudio: null,
   latencyFrame: null,
   cloneFrame: null,
-  latencyAutoPlayed: false
+  latencyAutoPlayed: false,
+  live: {
+    ws: null,
+    mediaStream: null,
+    inputContext: null,
+    sourceNode: null,
+    processor: null,
+    monitorGain: null,
+    players: {},
+    running: false,
+    connecting: false,
+    activeProvider: null,
+    transcripts: {
+      volcano: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() },
+      aliyun: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() },
+      iflytek: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() }
+    },
+    latency: {
+      volcano: createLiveLatencyState(),
+      aliyun: createLiveLatencyState(),
+      iflytek: createLiveLatencyState()
+    }
+  }
 };
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   setupAudioExperience();
+  setupLiveDemo();
+  setupLiveDemoMotion();
   setupDemoCardMotion();
   try {
     const response = await fetch(DATA_URL, { cache: "no-store" });
@@ -36,6 +61,621 @@ async function init() {
     );
     console.error(error);
   }
+}
+
+function setupLiveDemo() {
+  const startButton = document.querySelector("#liveStartButton");
+  const stopButton = document.querySelector("#liveStopButton");
+  if (!startButton || !stopButton) return;
+
+  state.live.players = {
+    volcano: new PcmAudioQueue("volcano"),
+    aliyun: new PcmAudioQueue("aliyun"),
+    iflytek: new PcmAudioQueue("iflytek")
+  };
+
+  startButton.addEventListener("click", startLiveDemo);
+  stopButton.addEventListener("click", stopLiveDemo);
+  window.addEventListener("beforeunload", () => {
+    if (state.live.ws && state.live.ws.readyState === WebSocket.OPEN) {
+      state.live.ws.send(JSON.stringify({ type: "stop" }));
+    }
+  });
+}
+
+function setupLiveDemoMotion() {
+  if (!window.gsap || !window.ScrollTrigger) return;
+  gsap.registerPlugin(ScrollTrigger);
+
+  gsap.from(".live-demo-hero > div:first-child", {
+    scrollTrigger: {
+      trigger: "#live-demo",
+      start: "top 78%",
+      end: "top 40%",
+      scrub: true
+    },
+    y: 28,
+    opacity: 0.25,
+    ease: "none"
+  });
+
+  gsap.from(".live-provider-panel", {
+    scrollTrigger: {
+      trigger: ".live-provider-grid",
+      start: "top 84%"
+    },
+    y: 34,
+    scale: 0.96,
+    opacity: 0,
+    stagger: 0.12,
+    duration: 0.72,
+    ease: "power3.out"
+  });
+}
+
+async function startLiveDemo() {
+  if (state.live.running || state.live.connecting) return;
+
+  const startButton = document.querySelector("#liveStartButton");
+  const stopButton = document.querySelector("#liveStopButton");
+  const sourceLanguage = document.querySelector("#liveSourceLanguage").value;
+  const targetLanguage = document.querySelector("#liveTargetLanguage").value;
+  const voiceClone = document.querySelector("#liveVoiceClone").checked;
+  const audioEnabled = document.querySelector("#liveAudioOutput").checked;
+  const provider = getSelectedLiveProvider();
+  const languageCheck = validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage);
+
+  if (!languageCheck.ok) {
+    setLiveStatus("语种组合不可用", languageCheck.message);
+    return;
+  }
+
+  resetLivePanels(provider);
+  setLiveStatus("连接后端", `正在连接 ${LIVE_WS_URL}`);
+  startButton.disabled = true;
+  stopButton.disabled = false;
+  state.live.connecting = true;
+
+  try {
+    await connectLiveSocket();
+    await startMicrophoneStreaming();
+    await resumeLivePlayers();
+    state.live.activeProvider = provider;
+
+    state.live.ws.send(JSON.stringify({
+      type: "start",
+      sourceLanguage,
+      targetLanguage,
+      voiceClone,
+      audioEnabled,
+      providers: [provider]
+    }));
+
+    state.live.running = true;
+    setLiveStatus("采集中", `麦克风音频正在发送到${getProviderDisplayName(provider)}`);
+    startButton.textContent = "实时同传中";
+  } catch (error) {
+    await stopLiveDemo();
+    setLiveStatus("启动失败", error.message || String(error));
+  } finally {
+    state.live.connecting = false;
+  }
+}
+
+function validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage) {
+  if (provider === "iflytek") {
+    return sourceLanguage === "zh" && targetLanguage === "en"
+      ? { ok: true }
+      : { ok: false, message: "讯飞同传当前仅支持中文普通话到英语，请选择 中文 -> 英语" };
+  }
+  if (provider === "volcano") {
+    return ["zh", "en"].includes(sourceLanguage) || ["zh", "en"].includes(targetLanguage)
+      ? { ok: true }
+      : { ok: false, message: "火山 AST 要求源语言或目标语言至少一端为中文或英语" };
+  }
+  return { ok: true };
+}
+
+function getProviderDisplayName(provider) {
+  const names = {
+    volcano: "火山 AST",
+    aliyun: "阿里 Qwen",
+    iflytek: "讯飞同传"
+  };
+  return names[provider] || provider;
+}
+
+function getSelectedLiveProvider() {
+  const selected = document.querySelector('input[name="liveProvider"]:checked');
+  return selected ? selected.value : "volcano";
+}
+
+async function stopLiveDemo() {
+  stopMicrophoneStreaming();
+
+  if (state.live.ws && state.live.ws.readyState === WebSocket.OPEN) {
+    state.live.ws.send(JSON.stringify({ type: "stop" }));
+  }
+
+  Object.values(state.live.players).forEach((player) => player.resetClock());
+  state.live.running = false;
+  state.live.connecting = false;
+  state.live.activeProvider = null;
+
+  const startButton = document.querySelector("#liveStartButton");
+  const stopButton = document.querySelector("#liveStopButton");
+  if (startButton) {
+    startButton.disabled = false;
+    startButton.textContent = "开始实时同传";
+  }
+  if (stopButton) stopButton.disabled = true;
+  setLiveStatus("已停止", "本地采集已关闭");
+  markLivePanelsStopped();
+}
+
+function connectLiveSocket() {
+  return new Promise((resolve, reject) => {
+    if (state.live.ws && state.live.ws.readyState === WebSocket.OPEN) {
+      resolve();
+      return;
+    }
+
+    const ws = new WebSocket(LIVE_WS_URL);
+    state.live.ws = ws;
+    ws.addEventListener("open", () => resolve(), { once: true });
+    ws.addEventListener("message", (event) => handleLiveMessage(event.data));
+    ws.addEventListener("close", () => {
+      if (state.live.running) {
+        setLiveStatus("连接断开", "后端 WebSocket 已关闭");
+        stopMicrophoneStreaming();
+        state.live.running = false;
+      }
+    });
+    ws.addEventListener("error", () => reject(new Error("无法连接 live demo 后端，请先运行 backend/live_demo_server.py")));
+  });
+}
+
+function handleLiveMessage(raw) {
+  let message;
+  try {
+    message = JSON.parse(raw);
+  } catch (error) {
+    console.warn("Invalid live message", raw);
+    return;
+  }
+
+  if (message.type === "session_status") {
+    setLiveStatus(message.status || "会话", message.message || getLiveSessionCopy(message.status));
+    if (message.status === "audio") {
+      markLiveAudioStarted();
+    }
+    return;
+  }
+
+  if (message.type === "provider_status") {
+    updateProviderStatus(message.provider, message.status, message.message);
+    return;
+  }
+
+  if (message.type === "provider_event") {
+    updateProviderEvent(message.provider, message.event);
+    return;
+  }
+
+  if (message.type === "source_text" || message.type === "translation_text") {
+    updateLiveText(
+      message.provider,
+      message.type === "source_text" ? "source" : "translation",
+      message.text || "",
+      Boolean(message.final)
+    );
+    return;
+  }
+
+  if (message.type === "audio") {
+    const player = state.live.players[message.provider];
+    if (player) {
+      player.play(message.audio, message.encoding, message.sampleRate);
+      setAudioState(message.provider, "播放译后声音");
+      updateLiveAudioLatency(message.provider);
+    }
+    return;
+  }
+
+  if (message.type === "error") {
+    setLiveStatus("后端错误", message.message || "未知错误");
+  }
+}
+
+function getLiveSessionCopy(status) {
+  const copy = {
+    idle: "后端已就绪",
+    starting: "正在启动模型会话",
+    ready: "模型会话已就绪",
+    audio: "音频链路已通",
+    stopped: "会话已停止"
+  };
+  return copy[status] || "状态更新";
+}
+
+async function startMicrophoneStreaming() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("当前浏览器不支持麦克风采集");
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  });
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const context = new AudioContextClass();
+  const sourceNode = context.createMediaStreamSource(stream);
+  const processor = context.createScriptProcessor(4096, 1, 1);
+  const monitorGain = context.createGain();
+  monitorGain.gain.value = 0;
+
+  processor.onaudioprocess = (event) => {
+    if (!state.live.running) return;
+    if (!state.live.ws || state.live.ws.readyState !== WebSocket.OPEN) return;
+    const input = event.inputBuffer.getChannelData(0);
+    const pcm = resampleToInt16(input, context.sampleRate, 16000);
+    if (pcm.length === 0) return;
+    recordLiveAudioPacketSent();
+    state.live.ws.send(JSON.stringify({
+      type: "audio",
+      audio: bytesToBase64(new Uint8Array(pcm.buffer))
+    }));
+    pulseMicMeters();
+  };
+
+  sourceNode.connect(processor);
+  processor.connect(monitorGain);
+  monitorGain.connect(context.destination);
+  await context.resume();
+
+  state.live.mediaStream = stream;
+  state.live.inputContext = context;
+  state.live.sourceNode = sourceNode;
+  state.live.processor = processor;
+  state.live.monitorGain = monitorGain;
+}
+
+function stopMicrophoneStreaming() {
+  if (state.live.processor) {
+    state.live.processor.disconnect();
+    state.live.processor.onaudioprocess = null;
+  }
+  if (state.live.monitorGain) state.live.monitorGain.disconnect();
+  if (state.live.sourceNode) state.live.sourceNode.disconnect();
+  if (state.live.inputContext) state.live.inputContext.close();
+  if (state.live.mediaStream) {
+    state.live.mediaStream.getTracks().forEach((track) => track.stop());
+  }
+
+  state.live.processor = null;
+  state.live.monitorGain = null;
+  state.live.sourceNode = null;
+  state.live.inputContext = null;
+  state.live.mediaStream = null;
+}
+
+async function resumeLivePlayers() {
+  await Promise.all(Object.values(state.live.players).map((player) => player.resume()));
+}
+
+function resampleToInt16(input, inputRate, outputRate) {
+  if (outputRate === inputRate) {
+    return floatToInt16(input);
+  }
+
+  const ratio = inputRate / outputRate;
+  const outputLength = Math.floor(input.length / ratio);
+  const output = new Int16Array(outputLength);
+
+  for (let index = 0; index < outputLength; index += 1) {
+    const sourceIndex = index * ratio;
+    const left = Math.floor(sourceIndex);
+    const right = Math.min(input.length - 1, left + 1);
+    const weight = sourceIndex - left;
+    const sample = input[left] * (1 - weight) + input[right] * weight;
+    output[index] = floatSampleToInt16(sample);
+  }
+
+  return output;
+}
+
+function floatToInt16(input) {
+  const output = new Int16Array(input.length);
+  for (let index = 0; index < input.length; index += 1) {
+    output[index] = floatSampleToInt16(input[index]);
+  }
+  return output;
+}
+
+function floatSampleToInt16(sample) {
+  const clamped = Math.max(-1, Math.min(1, sample));
+  return clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+class PcmAudioQueue {
+  constructor(provider) {
+    this.provider = provider;
+    this.context = null;
+    this.nextTime = 0;
+  }
+
+  ensureContext() {
+    if (!this.context) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      this.context = new AudioContextClass();
+      this.nextTime = this.context.currentTime;
+    }
+    return this.context;
+  }
+
+  async resume() {
+    const context = this.ensureContext();
+    if (context.state === "suspended") await context.resume();
+  }
+
+  resetClock() {
+    if (this.context) {
+      this.nextTime = this.context.currentTime;
+    }
+  }
+
+  play(base64, encoding, sampleRate) {
+    const context = this.ensureContext();
+    const samples = decodePcmSamples(base64, encoding);
+    if (!samples.length) return;
+
+    const buffer = context.createBuffer(1, samples.length, sampleRate || 24000);
+    buffer.copyToChannel(samples, 0);
+
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(context.destination);
+
+    const startAt = Math.max(context.currentTime + 0.02, this.nextTime);
+    source.start(startAt);
+    this.nextTime = startAt + buffer.duration;
+  }
+}
+
+function decodePcmSamples(base64, encoding) {
+  const bytes = base64ToBytes(base64);
+  if (encoding === "pcm_f32le") {
+    return new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  }
+
+  const int16 = new Int16Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  const output = new Float32Array(int16.length);
+  for (let index = 0; index < int16.length; index += 1) {
+    output[index] = Math.max(-1, Math.min(1, int16[index] / 32768));
+  }
+  return output;
+}
+
+function createLiveTranscriptState() {
+  return {
+    history: [],
+    current: "",
+    currentFinal: false
+  };
+}
+
+function createLiveLatencyState() {
+  return {
+    lastPacketSentAt: null,
+    lastAudioReturnedAt: null,
+    lastLatencyMs: null
+  };
+}
+
+function resetLivePanels(activeProvider) {
+  state.live.transcripts = {
+    volcano: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() },
+    aliyun: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() },
+    iflytek: { source: createLiveTranscriptState(), translation: createLiveTranscriptState() }
+  };
+  state.live.latency = {
+    volcano: createLiveLatencyState(),
+    aliyun: createLiveLatencyState(),
+    iflytek: createLiveLatencyState()
+  };
+
+  document.querySelectorAll("[data-live-provider]").forEach((panel) => {
+    const isActive = panel.dataset.liveProvider === activeProvider;
+    panel.classList.remove("is-live", "has-error");
+    panel.classList.toggle("is-disabled", !isActive);
+    panel.querySelector("[data-provider-status]").textContent = isActive ? "连接中" : "未启用";
+    panel.querySelector("[data-source-text]").textContent = isActive ? "正在等待识别原文。" : "本轮未选择该模型。";
+    panel.querySelector("[data-translation-text]").textContent = isActive ? "正在等待翻译结果。" : "切换模型后重新开始即可试用。";
+    panel.querySelector("[data-provider-event]").textContent = isActive ? "等待事件" : "未启用";
+    panel.querySelector("[data-audio-state]").textContent = "音频待命";
+    setLatencyBadge(panel.dataset.liveProvider, isActive ? "语音延迟待测" : "未启用", "idle");
+  });
+}
+
+function markLivePanelsStopped() {
+  document.querySelectorAll("[data-live-provider]").forEach((panel) => {
+    panel.classList.remove("is-live");
+    const status = panel.querySelector("[data-provider-status]");
+    if (status && status.textContent !== "错误") status.textContent = "已停止";
+  });
+}
+
+function setLiveStatus(label, detail) {
+  const statusLine = document.querySelector("#liveStatusLine");
+  if (!statusLine) return;
+  statusLine.querySelector("span").textContent = label;
+  statusLine.querySelector("strong").textContent = detail;
+}
+
+function getProviderPanel(provider) {
+  return document.querySelector(`[data-live-provider="${provider}"]`);
+}
+
+function updateProviderStatus(provider, status, message) {
+  const panel = getProviderPanel(provider);
+  if (!panel) return;
+  const output = panel.querySelector("[data-provider-status]");
+  const statusText = {
+    connecting: "连接中",
+    connected: "在线",
+    closed: "已关闭",
+    error: "错误"
+  };
+  output.textContent = statusText[status] || status;
+  panel.classList.toggle("is-live", status === "connected");
+  panel.classList.toggle("has-error", status === "error");
+  if (message) panel.querySelector("[data-provider-event]").textContent = message;
+}
+
+function updateProviderEvent(provider, eventName) {
+  const panel = getProviderPanel(provider);
+  if (!panel || !eventName) return;
+  panel.querySelector("[data-provider-event]").textContent = eventName;
+}
+
+function updateLiveText(provider, kind, text, final) {
+  const panel = getProviderPanel(provider);
+  if (!panel || !text) return;
+
+  const key = kind === "source" ? "source" : "translation";
+  const field = panel.querySelector(kind === "source" ? "[data-source-text]" : "[data-translation-text]");
+  if (!state.live.transcripts[provider]) {
+    state.live.transcripts[provider] = {
+      source: createLiveTranscriptState(),
+      translation: createLiveTranscriptState()
+    };
+  }
+  const store = state.live.transcripts[provider][key];
+  const normalizedText = text.trim();
+  if (!normalizedText) return;
+
+  if (final) {
+    if (store.currentFinal && store.current && store.current !== normalizedText) {
+      store.history.push(store.current);
+    }
+    store.current = normalizedText;
+    store.currentFinal = true;
+  } else {
+    if (store.currentFinal && store.current) {
+      store.history.push(store.current);
+      store.current = "";
+    }
+    store.current = normalizedText;
+    store.currentFinal = false;
+  }
+
+  renderLiveTranscript(field, store);
+}
+
+function renderLiveTranscript(field, store) {
+  const history = store.history
+    .filter(Boolean)
+    .map((line) => `<span class="live-text-line is-history">${escapeHtml(line)}</span>`)
+    .join("");
+  const current = store.current
+    ? `<span class="live-text-line is-current">${escapeHtml(store.current)}</span>`
+    : "";
+
+  field.innerHTML = history + current;
+  field.scrollTop = field.scrollHeight;
+  requestAnimationFrame(() => {
+    field.scrollTop = field.scrollHeight;
+  });
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function setAudioState(provider, text) {
+  const panel = getProviderPanel(provider);
+  if (!panel) return;
+  panel.querySelector("[data-audio-state]").textContent = text;
+  panel.classList.add("audio-active");
+  clearTimeout(panel._audioTimer);
+  panel._audioTimer = setTimeout(() => panel.classList.remove("audio-active"), 420);
+}
+
+function markLiveAudioStarted() {
+  document.querySelectorAll(".live-provider-panel.is-live").forEach((panel) => {
+    const provider = panel.dataset.liveProvider;
+    const latency = state.live.latency[provider];
+    if (!latency || latency.lastLatencyMs !== null) return;
+    setLatencyBadge(provider, "等待语音", "timing");
+  });
+}
+
+function recordLiveAudioPacketSent() {
+  const provider = state.live.activeProvider || getSelectedLiveProvider();
+  const latency = state.live.latency[provider];
+  if (!latency) return;
+  latency.lastPacketSentAt = performance.now();
+}
+
+function updateLiveAudioLatency(provider) {
+  const latency = state.live.latency[provider];
+  if (!latency) return;
+
+  const now = performance.now();
+  if (latency.lastPacketSentAt === null) {
+    setLatencyBadge(provider, "语音 --ms", "ready");
+    return;
+  }
+
+  const latencyMs = Math.max(0, Math.round(now - latency.lastPacketSentAt));
+  latency.lastAudioReturnedAt = now;
+  latency.lastLatencyMs = latencyMs;
+  setLatencyBadge(provider, `语音 ${latencyMs}ms`, "ready");
+}
+
+function setLatencyBadge(provider, text, mode) {
+  const panel = getProviderPanel(provider);
+  if (!panel) return;
+  const badge = panel.querySelector("[data-latency-badge]");
+  if (!badge) return;
+  badge.textContent = text;
+  badge.dataset.latencyMode = mode;
+}
+
+function pulseMicMeters() {
+  document.querySelectorAll(".live-provider-panel.is-live").forEach((panel) => {
+    panel.classList.add("mic-active");
+    clearTimeout(panel._micTimer);
+    panel._micTimer = setTimeout(() => panel.classList.remove("mic-active"), 180);
+  });
 }
 
 function renderPage(data) {
