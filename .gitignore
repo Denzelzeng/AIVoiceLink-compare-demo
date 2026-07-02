@@ -7,8 +7,9 @@ package-lock.json
 .env
 *.env
 backend/backend_dev.ps1
-.log
+*.log
 backend/ast_live_client.py
 backend/livetranslate_client.py
 backend/main_ast.py
 backend/main.py
+__pycache__/
