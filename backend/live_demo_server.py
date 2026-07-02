@@ -24,6 +24,8 @@ from ast_live_client import (
 from livetranslate_client import LiveTranslateClient
 
 
+load_dotenv()
+
 HOST = os.environ.get("LIVE_DEMO_HOST", "127.0.0.1")
 PORT = int(os.environ.get("LIVE_DEMO_PORT", "8765"))
 ALI_OUTPUT_RATE = 24000
