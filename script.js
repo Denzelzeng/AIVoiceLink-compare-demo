@@ -1,5 +1,5 @@
 const DATA_URL = "data/comparison-data.json";
-const LIVE_WS_URL = "ws://127.0.0.1:8765";
+const LIVE_WS_URL = getLiveWsUrl();
 const AUDIO_PATHS = {
   source: "assets/audio/sample_voice_mandarin_male.wav",
   clone: "assets/audio/translate_audio.wav"
@@ -44,7 +44,17 @@ const state = {
 
 document.addEventListener("DOMContentLoaded", init);
 
+function getLiveWsUrl() {
+  const localHosts = new Set(["localhost", "127.0.0.1", ""]);
+  if (localHosts.has(window.location.hostname)) {
+    return "ws://127.0.0.1:8765";
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/live`;
+}
+
 async function init() {
+  setupMobileNavigation();
   setupAudioExperience();
   setupLiveDemo();
   setupLiveDemoMotion();
@@ -61,6 +71,37 @@ async function init() {
     );
     console.error(error);
   }
+}
+
+function setupMobileNavigation() {
+  const topbar = document.querySelector(".topbar");
+  const button = document.querySelector("#mobileMenuButton");
+  const menu = document.querySelector("#mobileNavMenu");
+  if (!topbar || !button || !menu) return;
+
+  const setOpen = (open) => {
+    topbar.classList.toggle("is-menu-open", open);
+    button.setAttribute("aria-expanded", String(open));
+    button.setAttribute("aria-label", open ? "关闭页面导航" : "打开页面导航");
+  };
+
+  button.addEventListener("click", () => {
+    setOpen(!topbar.classList.contains("is-menu-open"));
+  });
+
+  menu.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => setOpen(false));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!topbar.classList.contains("is-menu-open")) return;
+    if (topbar.contains(event.target)) return;
+    setOpen(false);
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.matchMedia("(min-width: 761px)").matches) setOpen(false);
+  });
 }
 
 function setupLiveDemo() {
@@ -109,7 +150,8 @@ function setupLiveDemoMotion() {
     opacity: 0,
     stagger: 0.12,
     duration: 0.72,
-    ease: "power3.out"
+    ease: "power3.out",
+    clearProps: "transform,opacity"
   });
 }
 
