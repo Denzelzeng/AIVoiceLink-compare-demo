@@ -9,6 +9,62 @@ const LATENCY_PROFILE = {
   globalvoice: { startDelay: 0.46, completionLag: 0.68, output: "首字 0.72s / 终字 3.5s" },
   iflytek: { startDelay: 0.92, completionLag: 1.48, output: "首字 1.35s / 终字 5.2s" }
 };
+const LIVE_LANGUAGE_OPTIONS = {
+  volcano: [
+    { value: "zh", label: "中文" },
+    { value: "en", label: "英语" },
+    { value: "de", label: "德语" },
+    { value: "fr", label: "法语" },
+    { value: "es", label: "西班牙语" },
+    { value: "id", label: "印尼语" },
+    { value: "ja", label: "日语" },
+    { value: "pt", label: "葡萄牙语" }
+  ],
+  aliyun: [
+    { value: "zh", label: "中文" },
+    { value: "en", label: "英语" },
+    { value: "ar", label: "阿拉伯语" },
+    { value: "de", label: "德语" },
+    { value: "fr", label: "法语" },
+    { value: "es", label: "西班牙语" },
+    { value: "pt", label: "葡萄牙语" },
+    { value: "id", label: "印尼语" },
+    { value: "it", label: "意大利语" },
+    { value: "ko", label: "韩语" },
+    { value: "ru", label: "俄语" },
+    { value: "th", label: "泰语" },
+    { value: "vi", label: "越南语" },
+    { value: "ja", label: "日语" },
+    { value: "tr", label: "土耳其语" },
+    { value: "hi", label: "印地语" },
+    { value: "ms", label: "马来语" },
+    { value: "nl", label: "荷兰语" },
+    { value: "ur", label: "乌尔都语" },
+    { value: "nb", label: "挪威语" },
+    { value: "sv", label: "瑞典语" },
+    { value: "da", label: "丹麦语" },
+    { value: "he", label: "希伯来语" },
+    { value: "fi", label: "芬兰语" },
+    { value: "pl", label: "波兰语" },
+    { value: "is", label: "冰岛语" },
+    { value: "cs", label: "捷克语" },
+    { value: "fil", label: "菲律宾语" },
+    { value: "fa", label: "波斯语" }
+  ],
+  iflytek: [
+    { value: "zh", label: "中文" },
+    { value: "en", label: "英语" }
+  ]
+};
+const IFLYTEK_LANGUAGE_PAIR = {
+  source: [{ value: "zh", label: "中文" }],
+  target: [{ value: "en", label: "英语" }]
+};
+const LIVE_DEFAULT_LANGUAGE_PAIR = {
+  volcano: { source: "zh", target: "en" },
+  aliyun: { source: "zh", target: "en" },
+  iflytek: { source: "zh", target: "en" }
+};
 const state = {
   data: null,
   videos: [],
@@ -17,7 +73,15 @@ const state = {
   cloneAudio: null,
   latencyFrame: null,
   cloneFrame: null,
-  latencyAutoPlayed: false,
+  latencyPreviewPlayed: false,
+  latencyPlayback: {
+    status: "idle",
+    startedAt: 0,
+    elapsedBeforePause: 0,
+    rows: [],
+    summary: null,
+    button: null
+  },
   live: {
     ws: null,
     mediaStream: null,
@@ -117,11 +181,58 @@ function setupLiveDemo() {
 
   startButton.addEventListener("click", startLiveDemo);
   stopButton.addEventListener("click", stopLiveDemo);
+  document.querySelectorAll('input[name="liveProvider"]').forEach((input) => {
+    input.addEventListener("change", () => updateLiveLanguageOptions(input.value));
+  });
+  updateLiveLanguageOptions(getSelectedLiveProvider());
   window.addEventListener("beforeunload", () => {
     if (state.live.ws && state.live.ws.readyState === WebSocket.OPEN) {
       state.live.ws.send(JSON.stringify({ type: "stop" }));
     }
   });
+}
+
+function updateLiveLanguageOptions(provider) {
+  const sourceSelect = document.querySelector("#liveSourceLanguage");
+  const targetSelect = document.querySelector("#liveTargetLanguage");
+  if (!sourceSelect || !targetSelect) return;
+
+  const sourceLanguages = getLiveLanguageOptions(provider, "source");
+  const targetLanguages = getLiveLanguageOptions(provider, "target");
+  const defaults = LIVE_DEFAULT_LANGUAGE_PAIR[provider] || LIVE_DEFAULT_LANGUAGE_PAIR.volcano;
+  const sourceValue = sourceLanguages.some((language) => language.value === sourceSelect.value)
+    ? sourceSelect.value
+    : defaults.source;
+  const targetValue = targetLanguages.some((language) => language.value === targetSelect.value)
+    ? targetSelect.value
+    : defaults.target;
+
+  fillLanguageSelect(sourceSelect, sourceLanguages, sourceValue);
+  fillLanguageSelect(targetSelect, targetLanguages, targetValue);
+
+  if (provider === "iflytek") {
+    sourceSelect.value = "zh";
+    targetSelect.value = "en";
+  }
+}
+
+function getLiveLanguageOptions(provider, role) {
+  if (provider === "iflytek") {
+    return IFLYTEK_LANGUAGE_PAIR[role];
+  }
+  return LIVE_LANGUAGE_OPTIONS[provider] || LIVE_LANGUAGE_OPTIONS.volcano;
+}
+
+function fillLanguageSelect(select, languages, value) {
+  select.replaceChildren(
+    ...languages.map((language) => {
+      const option = document.createElement("option");
+      option.value = language.value;
+      option.textContent = language.label;
+      return option;
+    })
+  );
+  select.value = languages.some((language) => language.value === value) ? value : languages[0].value;
 }
 
 function setupLiveDemoMotion() {
@@ -205,6 +316,14 @@ async function startLiveDemo() {
 }
 
 function validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage) {
+  const sourceSupported = new Set(getLiveLanguageOptions(provider, "source").map((language) => language.value));
+  const targetSupported = new Set(getLiveLanguageOptions(provider, "target").map((language) => language.value));
+  if (!sourceSupported.has(sourceLanguage) || !targetSupported.has(targetLanguage)) {
+    return { ok: false, message: `${getProviderDisplayName(provider)} 不支持当前语种，请重新选择源语言和目标语言` };
+  }
+  if (sourceLanguage === targetLanguage) {
+    return { ok: false, message: "源语言和目标语言不能相同" };
+  }
   if (provider === "iflytek") {
     return sourceLanguage === "zh" && targetLanguage === "en"
       ? { ok: true }
@@ -748,9 +867,39 @@ function setupLatencyDemo() {
   state.latencyAudio = new Audio(AUDIO_PATHS.source);
   state.latencyAudio.preload = "auto";
   resetLatencyRows(rows);
+  state.latencyPlayback.rows = rows;
+  state.latencyPlayback.summary = summary;
+  state.latencyPlayback.button = button;
 
-  button.addEventListener("click", () => startLatencyDemo(rows, summary, button));
-  setupLatencyAutoPlay(rows, summary, button);
+  button.addEventListener("click", () => handleLatencyDemoButton(rows, summary, button));
+  setupLatencyScrollPreview(rows, summary);
+}
+
+function setupLatencyScrollPreview(rows, summary) {
+  const section = document.querySelector("#latency-demo");
+  if (!section || state.latencyPreviewPlayed) return;
+
+  const playPreview = () => {
+    if (state.latencyPreviewPlayed || state.latencyPlayback.status === "playing" || state.latencyPlayback.status === "paused") {
+      return;
+    }
+    state.latencyPreviewPlayed = true;
+    runLatencyPreview(rows, summary);
+  };
+
+  if (!("IntersectionObserver" in window)) {
+    requestAnimationFrame(playPreview);
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      playPreview();
+    });
+  }, { rootMargin: "0px 0px -18% 0px", threshold: 0.36 });
+  observer.observe(section);
 }
 
 function hydrateSpeechTokens() {
@@ -768,48 +917,116 @@ function hydrateSpeechTokens() {
   });
 }
 
-function startLatencyDemo(rows, summary, button, options = {}) {
+function handleLatencyDemoButton(rows, summary, button) {
+  if (state.latencyPlayback.status === "playing") {
+    pauseLatencyDemo(summary, button);
+    return;
+  }
+  if (state.latencyPlayback.status === "paused") {
+    resumeLatencyDemo(summary, button);
+    return;
+  }
+  startLatencyDemo(rows, summary, button);
+}
+
+function startLatencyDemo(rows, summary, button) {
   stopClonePlayback();
   if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+  state.latencyFrame = null;
   state.latencyAudio.pause();
   state.latencyAudio.currentTime = 0;
   resetLatencyRows(rows);
-  summary.textContent = options.auto ? "自动演示中" : "演示中";
+  summary.textContent = "演示中";
   button.classList.add("is-playing");
-  button.querySelector("span:last-child").textContent = "重新演示";
+  button.querySelector("span:last-child").textContent = "暂停";
+  state.latencyPlayback.status = "playing";
+  state.latencyPlayback.startedAt = performance.now();
+  state.latencyPlayback.elapsedBeforePause = 0;
+  state.latencyPlayback.rows = rows;
+  state.latencyPlayback.summary = summary;
+  state.latencyPlayback.button = button;
 
-  const startedAt = performance.now();
   const playback = state.latencyAudio.play();
   if (playback) {
     playback.catch(() => {
-      if (options.auto) {
-        summary.textContent = "点击开启声音";
-      } else {
-        summary.textContent = "浏览器阻止播放";
-      }
+      summary.textContent = "浏览器阻止播放";
       button.classList.remove("is-playing");
+      button.querySelector("span:last-child").textContent = "开始演示";
+      state.latencyPlayback.status = "idle";
+      if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+      state.latencyFrame = null;
     });
   }
-  runLatencyTimeline(rows, summary, button, startedAt);
+  runLatencyTimeline(rows, summary, button);
 }
 
-function setupLatencyAutoPlay(rows, summary, button) {
-  const card = document.querySelector(".interpretation-card");
-  if (!card || !("IntersectionObserver" in window)) return;
+function pauseLatencyDemo(summary, button) {
+  if (state.latencyPlayback.status !== "playing") return;
+  state.latencyPlayback.elapsedBeforePause = getLatencyElapsed();
+  state.latencyPlayback.status = "paused";
+  if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+  state.latencyFrame = null;
+  if (state.latencyAudio) state.latencyAudio.pause();
+  summary.textContent = "已暂停";
+  button.classList.remove("is-playing");
+  button.querySelector("span:last-child").textContent = "继续演示";
+}
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const rect = entry.target.getBoundingClientRect();
-      const fullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-      const fallbackVisible = rect.height > window.innerHeight && entry.intersectionRatio >= 0.82;
-      if (state.latencyAutoPlayed || (!fullyVisible && !fallbackVisible)) return;
-      state.latencyAutoPlayed = true;
-      startLatencyDemo(rows, summary, button, { auto: true });
-      observer.disconnect();
-    });
-  }, { threshold: [0.5, 0.82, 0.98, 1] });
+function resumeLatencyDemo(summary, button) {
+  if (state.latencyPlayback.status !== "paused") return;
+  state.latencyPlayback.status = "playing";
+  state.latencyPlayback.startedAt = performance.now();
+  summary.textContent = "演示中";
+  button.classList.add("is-playing");
+  button.querySelector("span:last-child").textContent = "暂停";
 
-  observer.observe(card);
+  const duration = getLatencyAudioDuration();
+  if (state.latencyAudio && state.latencyAudio.currentTime < duration) {
+    const playback = state.latencyAudio.play();
+    if (playback) {
+      playback.catch(() => {
+        summary.textContent = "浏览器阻止播放";
+        pauseLatencyDemo(summary, button);
+      });
+    }
+  }
+  runLatencyTimeline(state.latencyPlayback.rows, summary, button);
+}
+
+function runLatencyPreview(rows, summary) {
+  if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
+  state.latencyFrame = null;
+  if (state.latencyAudio) {
+    state.latencyAudio.pause();
+    state.latencyAudio.currentTime = 0;
+  }
+  resetLatencyRows(rows);
+  summary.textContent = "字幕动画预览";
+  state.latencyPlayback.status = "preview";
+  const startedAt = performance.now();
+  const audioDuration = getLatencyAudioDuration();
+  const totalRun = getLatencyTimelineTotal(audioDuration);
+
+  const tick = (now) => {
+    const elapsed = (now - startedAt) / 1000;
+    updateLatencyRows(rows, elapsed, audioDuration);
+
+    if (elapsed < totalRun) {
+      state.latencyFrame = requestAnimationFrame(tick);
+      return;
+    }
+
+    state.latencyFrame = null;
+    rows.forEach((row) => setLineProgress(row, 1));
+    setLatencyFinalOutputs(rows);
+    summary.textContent = "点击开始播放音频";
+    if (state.latencyPlayback.status === "preview") {
+      state.latencyPlayback.status = "idle";
+      state.latencyPlayback.elapsedBeforePause = 0;
+    }
+  };
+
+  state.latencyFrame = requestAnimationFrame(tick);
 }
 
 function resetLatencyRows(rows) {
@@ -821,24 +1038,42 @@ function resetLatencyRows(rows) {
   });
 }
 
-function runLatencyTimeline(rows, summary, button, startedAt) {
+function getLatencyAudioDuration() {
   const fallbackDuration = 4.4;
-  const audioDuration = Number.isFinite(state.latencyAudio.duration) && state.latencyAudio.duration > 0
+  return Number.isFinite(state.latencyAudio.duration) && state.latencyAudio.duration > 0
     ? state.latencyAudio.duration
     : fallbackDuration;
-  const totalRun = audioDuration + Math.max(...Object.values(LATENCY_PROFILE).map((item) => item.completionLag));
+}
+
+function getLatencyTimelineTotal(audioDuration) {
+  return audioDuration + Math.max(...Object.values(LATENCY_PROFILE).map((item) => item.completionLag));
+}
+
+function getLatencyElapsed(now = performance.now()) {
+  const playback = state.latencyPlayback;
+  if (playback.status !== "playing") return playback.elapsedBeforePause;
+  return playback.elapsedBeforePause + ((now - playback.startedAt) / 1000);
+}
+
+function updateLatencyRows(rows, elapsed, audioDuration) {
+  rows.forEach((row) => {
+    const profile = LATENCY_PROFILE[row.dataset.line];
+    const duration = audioDuration + profile.completionLag - profile.startDelay;
+    const progress = profile.startDelay === 0
+      ? elapsed / audioDuration
+      : (elapsed - profile.startDelay) / duration;
+    setLineProgress(row, progress);
+  });
+}
+
+function runLatencyTimeline(rows, summary, button) {
+  const audioDuration = getLatencyAudioDuration();
+  const totalRun = getLatencyTimelineTotal(audioDuration);
 
   const tick = (now) => {
-    const elapsed = (now - startedAt) / 1000;
-
-    rows.forEach((row) => {
-      const profile = LATENCY_PROFILE[row.dataset.line];
-      const duration = audioDuration + profile.completionLag - profile.startDelay;
-      const progress = profile.startDelay === 0
-        ? elapsed / audioDuration
-        : (elapsed - profile.startDelay) / duration;
-      setLineProgress(row, progress);
-    });
+    if (state.latencyPlayback.status !== "playing") return;
+    const elapsed = getLatencyElapsed(now);
+    updateLatencyRows(rows, elapsed, audioDuration);
 
     if (elapsed < totalRun) {
       state.latencyFrame = requestAnimationFrame(tick);
@@ -849,6 +1084,15 @@ function runLatencyTimeline(rows, summary, button, startedAt) {
     setLatencyFinalOutputs(rows);
     summary.textContent = "全球语终字快 1.7s";
     button.classList.remove("is-playing");
+    button.querySelector("span:last-child").textContent = "重新演示";
+    state.latencyPlayback.status = "finished";
+    state.latencyPlayback.elapsedBeforePause = 0;
+    state.latencyPlayback.startedAt = 0;
+    state.latencyFrame = null;
+    if (state.latencyAudio) {
+      state.latencyAudio.pause();
+      state.latencyAudio.currentTime = 0;
+    }
   };
 
   state.latencyFrame = requestAnimationFrame(tick);
@@ -898,10 +1142,16 @@ function setupCloneDemo() {
     if (state.latencyFrame) cancelAnimationFrame(state.latencyFrame);
     state.cloneFrame = null;
     state.latencyFrame = null;
-    if (state.latencyAudio) state.latencyAudio.pause();
+    state.latencyPlayback.status = "idle";
+    state.latencyPlayback.elapsedBeforePause = 0;
+    state.latencyPlayback.startedAt = 0;
+    if (state.latencyAudio) {
+      state.latencyAudio.pause();
+      state.latencyAudio.currentTime = 0;
+    }
     if (latencyButton) {
       latencyButton.classList.remove("is-playing");
-      latencyButton.querySelector("span:last-child").textContent = "重新演示";
+      latencyButton.querySelector("span:last-child").textContent = "开始演示";
     }
     if (summary) summary.textContent = "译文音频播放中";
 

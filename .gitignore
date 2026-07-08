@@ -1,5 +1,6 @@
 *.ps1
 .agents/
+.vscode/
 skills-lock.json
 node_modules/
 package-lock.json
@@ -9,6 +10,4 @@ package-lock.json
 *.log
 backend/ast_live_client.py
 backend/livetranslate_client.py
-backend/main_ast.py
-backend/main.py
 __pycache__/

@@ -34,6 +34,41 @@ IFLYTEK_PATH = "/v1/private/simult_interpretation"
 IFLYTEK_ENDPOINT = f"wss://{IFLYTEK_HOST}{IFLYTEK_PATH}"
 IFLYTEK_FRAME_BYTES = 1280
 IFLYTEK_OUTPUT_RATE = 16000
+LIVE_VOICE_LANGUAGES = {
+    "volcano": {"zh", "en", "de", "fr", "es", "id", "ja", "pt"},
+    "aliyun": {
+        "zh",
+        "en",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "ur",
+        "nb",
+        "sv",
+        "da",
+        "he",
+        "fi",
+        "pl",
+        "is",
+        "cs",
+        "fil",
+        "fa",
+    },
+    "iflytek": {"zh", "en"},
+}
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -93,6 +128,21 @@ def _get_iflytek_credentials() -> tuple[str, str, str]:
     api_secret = _first_env("IFLYTEK_API_SECRET", "XFYUN_API_SECRET", "APISecret", "API_SECRET")
     api_key = _first_env("IFLYTEK_API_KEY", "XFYUN_API_KEY", "APIKey", "API_KEY")
     return app_id, api_secret, api_key
+
+
+def _validate_live_language(provider: str, source_language: str, target_language: str) -> Optional[str]:
+    supported = LIVE_VOICE_LANGUAGES.get(provider)
+    if supported is None:
+        return f"未知模型: {provider}"
+    if source_language not in supported or target_language not in supported:
+        return f"{provider} 不支持当前语种，请选择该模型支持文本和语音输出的语言"
+    if source_language == target_language:
+        return "源语言和目标语言不能相同"
+    if provider == "iflytek" and (source_language != "zh" or target_language != "en"):
+        return "讯飞同传当前仅支持中文普通话到英语"
+    if provider == "volcano" and source_language not in {"zh", "en"} and target_language not in {"zh", "en"}:
+        return "火山 AST 语音输出要求源语言或目标语言至少一端为中文或英语"
+    return None
 
 
 @dataclass
@@ -572,6 +622,12 @@ class BrowserSession:
         audio_enabled = bool(config.get("audioEnabled", True))
         voice_clone = bool(config.get("voiceClone", True)) and audio_enabled
         requested = set(config.get("providers") or ["volcano"])
+
+        for provider in sorted(requested):
+            language_error = _validate_live_language(provider, source_language, target_language)
+            if language_error:
+                await self.send_event({"type": "error", "message": language_error})
+                return
 
         bridges: dict[str, ProviderBridge] = {}
         if "volcano" in requested:
