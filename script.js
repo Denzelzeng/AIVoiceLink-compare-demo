@@ -279,12 +279,12 @@ async function startLiveDemo() {
   const languageCheck = validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage);
 
   if (!languageCheck.ok) {
-    setLiveStatus("语种组合不可用", languageCheck.message);
+    setLiveStatus(languageCheck.message);
     return;
   }
 
   resetLivePanels(provider);
-  setLiveStatus("连接后端", `正在连接 ${LIVE_WS_URL}`);
+  setLiveStatus("正在准备实时同传…");
   startButton.disabled = true;
   stopButton.disabled = false;
   state.live.connecting = true;
@@ -305,11 +305,11 @@ async function startLiveDemo() {
     }));
 
     state.live.running = true;
-    setLiveStatus("采集中", `麦克风音频正在发送到${getProviderDisplayName(provider)}`);
+    setLiveStatus("实时同传进行中");
     startButton.textContent = "实时同传中";
   } catch (error) {
     await stopLiveDemo();
-    setLiveStatus("启动失败", error.message || String(error));
+    setLiveStatus("暂时无法启动，请稍后重试");
   } finally {
     state.live.connecting = false;
   }
@@ -319,7 +319,7 @@ function validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage) 
   const sourceSupported = new Set(getLiveLanguageOptions(provider, "source").map((language) => language.value));
   const targetSupported = new Set(getLiveLanguageOptions(provider, "target").map((language) => language.value));
   if (!sourceSupported.has(sourceLanguage) || !targetSupported.has(targetLanguage)) {
-    return { ok: false, message: `${getProviderDisplayName(provider)} 不支持当前语种，请重新选择源语言和目标语言` };
+    return { ok: false, message: "当前模型不支持所选语种，请重新选择" };
   }
   if (sourceLanguage === targetLanguage) {
     return { ok: false, message: "源语言和目标语言不能相同" };
@@ -327,23 +327,14 @@ function validateLiveProviderLanguage(provider, sourceLanguage, targetLanguage) 
   if (provider === "iflytek") {
     return sourceLanguage === "zh" && targetLanguage === "en"
       ? { ok: true }
-      : { ok: false, message: "讯飞同传当前仅支持中文普通话到英语，请选择 中文 -> 英语" };
+      : { ok: false, message: "当前模型仅支持中文普通话到英语，请选择 中文 → 英语" };
   }
   if (provider === "volcano") {
     return ["zh", "en"].includes(sourceLanguage) || ["zh", "en"].includes(targetLanguage)
       ? { ok: true }
-      : { ok: false, message: "火山 AST 要求源语言或目标语言至少一端为中文或英语" };
+      : { ok: false, message: "当前模型要求源语言或目标语言至少一端为中文或英语" };
   }
   return { ok: true };
-}
-
-function getProviderDisplayName(provider) {
-  const names = {
-    volcano: "火山 AST",
-    aliyun: "阿里 Qwen",
-    iflytek: "讯飞同传"
-  };
-  return names[provider] || provider;
 }
 
 function getSelectedLiveProvider() {
@@ -370,7 +361,7 @@ async function stopLiveDemo() {
     startButton.textContent = "开始实时同传";
   }
   if (stopButton) stopButton.disabled = true;
-  setLiveStatus("已停止", "本地采集已关闭");
+  setLiveStatus("已停止");
   markLivePanelsStopped();
 }
 
@@ -387,12 +378,12 @@ function connectLiveSocket() {
     ws.addEventListener("message", (event) => handleLiveMessage(event.data));
     ws.addEventListener("close", () => {
       if (state.live.running) {
-        setLiveStatus("连接断开", "后端 WebSocket 已关闭");
+        setLiveStatus("连接已中断，请重新开始");
         stopMicrophoneStreaming();
         state.live.running = false;
       }
     });
-    ws.addEventListener("error", () => reject(new Error("无法连接 live demo 后端，请先运行 backend/live_demo_server.py")));
+    ws.addEventListener("error", () => reject(new Error("暂时无法连接实时同传服务")));
   });
 }
 
@@ -401,12 +392,12 @@ function handleLiveMessage(raw) {
   try {
     message = JSON.parse(raw);
   } catch (error) {
-    console.warn("Invalid live message", raw);
+    console.warn("Invalid live message");
     return;
   }
 
   if (message.type === "session_status") {
-    setLiveStatus(message.status || "会话", message.message || getLiveSessionCopy(message.status));
+    setLiveStatus(getLiveSessionCopy(message.status));
     if (message.status === "audio") {
       markLiveAudioStarted();
     }
@@ -414,12 +405,11 @@ function handleLiveMessage(raw) {
   }
 
   if (message.type === "provider_status") {
-    updateProviderStatus(message.provider, message.status, message.message);
+    updateProviderStatus(message.provider, message.status);
     return;
   }
 
   if (message.type === "provider_event") {
-    updateProviderEvent(message.provider, message.event);
     return;
   }
 
@@ -437,26 +427,26 @@ function handleLiveMessage(raw) {
     const player = state.live.players[message.provider];
     if (player) {
       player.play(message.audio, message.encoding, message.sampleRate);
-      setAudioState(message.provider, "播放译后声音");
+      setAudioState(message.provider);
       updateLiveAudioLatency(message.provider);
     }
     return;
   }
 
   if (message.type === "error") {
-    setLiveStatus("后端错误", message.message || "未知错误");
+    setLiveStatus("服务暂时不可用，请稍后重试");
   }
 }
 
 function getLiveSessionCopy(status) {
   const copy = {
-    idle: "后端已就绪",
-    starting: "正在启动模型会话",
-    ready: "模型会话已就绪",
-    audio: "音频链路已通",
-    stopped: "会话已停止"
+    idle: "准备就绪",
+    starting: "正在准备实时同传…",
+    ready: "实时同传已就绪",
+    audio: "实时同传进行中",
+    stopped: "已停止"
   };
-  return copy[status] || "状态更新";
+  return copy[status] || "实时同传状态已更新";
 }
 
 async function startMicrophoneStreaming() {
@@ -669,13 +659,14 @@ function resetLivePanels(activeProvider) {
 
   document.querySelectorAll("[data-live-provider]").forEach((panel) => {
     const isActive = panel.dataset.liveProvider === activeProvider;
+    const status = panel.querySelector("[data-provider-status]");
+    const sourceText = panel.querySelector("[data-source-text]");
+    const translationText = panel.querySelector("[data-translation-text]");
     panel.classList.remove("is-live", "has-error");
     panel.classList.toggle("is-disabled", !isActive);
-    panel.querySelector("[data-provider-status]").textContent = isActive ? "连接中" : "未启用";
-    panel.querySelector("[data-source-text]").textContent = isActive ? "正在等待识别原文。" : "本轮未选择该模型。";
-    panel.querySelector("[data-translation-text]").textContent = isActive ? "正在等待翻译结果。" : "切换模型后重新开始即可试用。";
-    panel.querySelector("[data-provider-event]").textContent = isActive ? "等待事件" : "未启用";
-    panel.querySelector("[data-audio-state]").textContent = "音频待命";
+    if (status) status.textContent = isActive ? "连接中" : "未启用";
+    if (sourceText) sourceText.textContent = isActive ? "正在等待识别原文。" : "本轮未选择该模型。";
+    if (translationText) translationText.textContent = isActive ? "正在等待翻译结果。" : "切换模型后重新开始即可试用。";
     setLatencyBadge(panel.dataset.liveProvider, isActive ? "语音延迟待测" : "未启用", "idle");
   });
 }
@@ -688,37 +679,39 @@ function markLivePanelsStopped() {
   });
 }
 
-function setLiveStatus(label, detail) {
-  const statusLine = document.querySelector("#liveStatusLine");
-  if (!statusLine) return;
-  statusLine.querySelector("span").textContent = label;
-  statusLine.querySelector("strong").textContent = detail;
+function setLiveStatus(message) {
+  const feedback = document.querySelector("#liveFeedback");
+  if (feedback) {
+    feedback.textContent = message;
+    return;
+  }
+
+  const legacyStatus = document.querySelector("#liveStatusLine");
+  if (!legacyStatus) return;
+  const label = legacyStatus.querySelector("span");
+  const detail = legacyStatus.querySelector("strong");
+  if (label) label.textContent = "状态";
+  if (detail) detail.textContent = message;
 }
 
 function getProviderPanel(provider) {
   return document.querySelector(`[data-live-provider="${provider}"]`);
 }
 
-function updateProviderStatus(provider, status, message) {
+function updateProviderStatus(provider, status) {
   const panel = getProviderPanel(provider);
   if (!panel) return;
   const output = panel.querySelector("[data-provider-status]");
+  if (!output) return;
   const statusText = {
     connecting: "连接中",
     connected: "在线",
     closed: "已关闭",
     error: "错误"
   };
-  output.textContent = statusText[status] || status;
+  output.textContent = statusText[status] || "状态更新";
   panel.classList.toggle("is-live", status === "connected");
   panel.classList.toggle("has-error", status === "error");
-  if (message) panel.querySelector("[data-provider-event]").textContent = message;
-}
-
-function updateProviderEvent(provider, eventName) {
-  const panel = getProviderPanel(provider);
-  if (!panel || !eventName) return;
-  panel.querySelector("[data-provider-event]").textContent = eventName;
 }
 
 function updateLiveText(provider, kind, text, final) {
@@ -781,10 +774,9 @@ function escapeHtml(value) {
   })[char]);
 }
 
-function setAudioState(provider, text) {
+function setAudioState(provider) {
   const panel = getProviderPanel(provider);
   if (!panel) return;
-  panel.querySelector("[data-audio-state]").textContent = text;
   panel.classList.add("audio-active");
   clearTimeout(panel._audioTimer);
   panel._audioTimer = setTimeout(() => panel.classList.remove("audio-active"), 420);

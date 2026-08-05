@@ -6,7 +6,7 @@
   <title>全球语-会译通 vs 科大x飞 | 竞品对比</title>
   <meta name="description" content="全球语-会译通与科大x飞在同传、识别、翻译质量、延迟和会议工作流上的竞品对比演示页。">
   <link rel="icon" type="image/svg+xml" href="images/ai_voicelink_logo.svg">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260805.1">
 </head>
 <body>
   <header class="topbar">
@@ -157,10 +157,11 @@
         </div>
       </div>
 
-      <div class="live-status-line" id="liveStatusLine">
+      <div class="live-status-line live-debug-compat" id="liveStatusLine" aria-hidden="true">
         <span>后端</span>
         <strong>等待连接 ws://127.0.0.1:8765</strong>
       </div>
+      <p class="live-feedback" id="liveFeedback" role="status" aria-live="polite">准备就绪</p>
 
       <div class="live-provider-grid">
         <article class="live-provider-panel volcano-panel" data-live-provider="volcano">
@@ -184,7 +185,7 @@
               <p data-translation-text>译文会在服务端返回时实时更新；语音输出将在本卡片中播放。</p>
             </section>
           </div>
-          <footer>
+          <footer class="live-debug-compat" aria-hidden="true">
             <span data-provider-event>等待事件</span>
             <b data-audio-state>音频待命</b>
           </footer>
@@ -211,7 +212,7 @@
               <p data-translation-text>译文会在服务端返回时实时更新；语音输出将在本卡片中播放。</p>
             </section>
           </div>
-          <footer>
+          <footer class="live-debug-compat" aria-hidden="true">
             <span data-provider-event>等待事件</span>
             <b data-audio-state>音频待命</b>
           </footer>
@@ -238,7 +239,7 @@
               <p data-translation-text>译文会在服务端返回时实时更新；语音输出将在本卡片中播放。</p>
             </section>
           </div>
-          <footer>
+          <footer class="live-debug-compat" aria-hidden="true">
             <span data-provider-event>等待事件</span>
             <b data-audio-state>音频待命</b>
           </footer>
@@ -443,6 +444,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-  <script src="script.js"></script>
+<script src="script.js?v=20260805.1"></script>
 </body>
 </html>

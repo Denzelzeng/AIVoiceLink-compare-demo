@@ -11,3 +11,5 @@ package-lock.json
 backend/ast_live_client.py
 backend/livetranslate_client.py
 __pycache__/
+
+AGENTS.md
