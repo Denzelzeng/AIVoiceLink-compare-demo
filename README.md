@@ -23,16 +23,19 @@ compare-demo/
 ├─ assets/audio/                 # 延迟与译音演示音频
 ├─ images/                       # Logo 与页面图片
 ├─ videos/                       # 对比演示视频
+├─ manual/
+│  ├─ conference.html             # 会译通客户操作手册（独立 HTML）
+│  └─ app.html                    # AI VoiceLink App 操作手册（独立 HTML）
 ├─ backend/
 │  ├─ live_demo_server.py        # 浏览器与各同传服务之间的 WebSocket 桥接服务
 │  ├─ ast_live_client.py         # 火山 AST 客户端
 │  ├─ livetranslate_client.py    # 阿里 Qwen LiveTranslate 客户端
 │  ├─ python_protogen/           # 火山 AST 所需的生成 protobuf 文件
-│  ├─ .env                       # 本地密钥（不纳入 Git）
-│  └─ backend_dev.ps1            # 激活 aivoicelink 环境的辅助脚本
-├─ dev.ps1                       # 激活 node_env 环境的辅助脚本
+│  └─ .env                       # 本地密钥（不纳入 Git）
 └─ package.json                  # 前端开发依赖（Playwright）
 ```
+
+`manual/conference.html` 和 `manual/app.html` 均为可独立打开的交互式 HTML 手册，不依赖实时同传后端。发布静态站点时请一并保留 `manual/` 目录。
 
 ## 快速启动
 
@@ -42,30 +45,34 @@ compare-demo/
 
 在项目根目录运行：
 
-```powershell
-& 'D:\ProgramData\miniforge3\condabin\conda.bat' run --no-capture-output -p 'D:\ProgramData\miniforge3\envs\node_env' python -m http.server 8000
+```bash
+python -m http.server 8000
 ```
 
-然后访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)。静态图表、视频、预置音频演示均可使用，无需配置任何 API 密钥。
+然后访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)。静态图表、视频、预置音频演示均可使用，无需配置任何 API 密钥。若系统将 Python 3 命令命名为 `python3` 或 `py`，请以对应命令替换 `python`。
 
 ### 2. 启动实时同传后端（可选）
 
-实时演示需要 Python 环境 `aivoicelink`，其中至少应有以下依赖：
+实时演示需要 Python 3.10+。建议使用虚拟环境，避免将依赖安装到系统 Python：
 
-```powershell
+```bash
+cd backend
+python -m venv .venv
+# macOS / Linux
+source .venv/bin/activate
+# Windows PowerShell：.\.venv\Scripts\Activate.ps1
 python -m pip install websockets python-dotenv protobuf
 ```
 
-在另一个 PowerShell 窗口中运行：
+安装完成后，在 `backend/` 目录启动服务：
 
-```powershell
-Set-Location .\backend
-.\backend_dev.ps1 python live_demo_server.py
+```bash
+python live_demo_server.py
 ```
 
 服务默认监听 `ws://127.0.0.1:8765`。当页面运行在 `localhost` 或 `127.0.0.1` 时，前端会自动连接此地址。启动成功后，在页面的“实时同传”区域选择模型并点击“开始实时同传”，浏览器会请求麦克风权限。
 
-> `dev.ps1` 使用 `node_env`，而 `backend/backend_dev.ps1` 使用 `aivoicelink`。这是目前仓库中的两套环境约定，交接后如需简化环境，请先验证 Python 依赖再合并。
+仓库会忽略所有 `.ps1` 文件；如需团队共用启动脚本，请提供跨平台脚本或将 PowerShell 脚本的使用方式另行记录，避免依赖个人 Conda 路径。
 
 ## 实时服务配置
 
@@ -118,6 +125,7 @@ IFLYTEK_API_KEY=your_api_key
 ## 部署说明
 
 - 仅展示静态内容时，将项目根目录作为静态站点发布即可；必须保留 `data`、`assets`、`images` 和 `videos` 的相对目录结构。
+- 操作手册需随站点一并发布：会译通手册位于 `/manual/conference.html`，App 手册位于 `/manual/app.html`。
 - 开启实时同传时，生产环境前端不再连接 `:8765`，而会连接同域的 `ws(s)://<站点>/live`。因此需要由 Nginx、Caddy 或应用网关将 `/live` 的 WebSocket 请求反向代理到 `live_demo_server.py`。
 - 麦克风采集在生产环境应通过 HTTPS 提供；现代浏览器通常只对 `localhost` 放宽该限制。
 - 不要把 `backend/.env`、服务商密钥或内部测试原始资料部署到公开静态站点。
@@ -132,5 +140,5 @@ IFLYTEK_API_KEY=your_api_key
 
 ## 当前维护提示
 
-- 最后一次提交为 `79a3b37`（2026-08-05，`模型脱敏`）。
+- 仓库会忽略所有 `.ps1` 脚本；它们仅用于本地辅助启动，不应作为项目必需环境配置。
 - 仓库目前没有锁定 Python 依赖的 `requirements.txt` 或自动化前端构建流程；若计划长期维护，建议补充依赖锁定、真实密钥的 `.env.example` 模板，以及部署环境的 WebSocket 反向代理配置。
