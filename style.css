@@ -1544,6 +1544,13 @@ h1 {
   font-weight: 800;
 }
 
+.video-brand .anonymous-video-brand {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
 .video-badge {
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.16);

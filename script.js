@@ -1268,8 +1268,9 @@ function renderVideos(data) {
     <article class="video-card" data-video-card="${vendor.id}">
       <header class="video-card-head">
         <div class="video-brand">
-          <img src="${vendor.logo}" alt="${vendor.name}">
-          <span>${vendor.name}</span>
+          ${vendor.logo
+            ? `<img src="${vendor.logo}" alt="${vendor.name}"><span>${vendor.name}</span>`
+            : `<span class="anonymous-video-brand">某友商</span>`}
         </div>
         <span class="video-badge">${vendor.rank}</span>
       </header>
