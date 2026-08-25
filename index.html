@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>全球语-会译通 vs 科大x飞 | 竞品对比</title>
-  <meta name="description" content="全球语-会译通与科大x飞在同传、识别、翻译质量、延迟和会议工作流上的竞品对比演示页。">
+  <title>全球语-会译通 vs 某友商 | 竞品对比</title>
+  <meta name="description" content="全球语-会译通与某友商在同传、识别、翻译质量、延迟和会议工作流上的竞品对比演示页。">
   <link rel="icon" type="image/svg+xml" href="images/ai_voicelink_logo.svg">
-  <link rel="stylesheet" href="style.css?v=20260805.1">
+  <link rel="stylesheet" href="style.css?v=20260825.1">
 </head>
 <body>
   <header class="topbar">
@@ -62,13 +62,13 @@
           </div>
           <div class="mini-bars">
             <div><span>全球语</span><i style="--w: 85.6%"></i></div>
-            <div><span>x飞</span><i class="orange" style="--w: 80%"></i></div>
+            <div><span>某友商</span><i class="orange" style="--w: 80%"></i></div>
           </div>
         </div>
         <div class="glass-panel latency-panel">
           <span>最终响应</span>
           <strong>3.5s</strong>
-          <small>比x飞快 1.7 秒</small>
+          <small>比某友商快 1.7 秒</small>
         </div>
         <div class="glass-panel workflow-panel">
           <span>会议闭环</span>
@@ -84,9 +84,8 @@
         <span>AI Voicelink - Conference</span>
       </article>
       <div class="versus">VS</div>
-      <article>
-        <img src="images/iflytek-logo.png" alt="科大x飞">
-        <span>iFLYTEK / x飞听见 / x飞同传</span>
+      <article class="anonymous-competitor">
+        <span>友商XF</span>
       </article>
     </section>
 
@@ -148,7 +147,7 @@
           </label>
           <label>
             <input type="radio" name="liveProvider" value="iflytek">
-            <span>x飞同传</span>
+            <span>某友商同传</span>
           </label>
         </fieldset>
         <div class="live-actions">
@@ -221,8 +220,8 @@
         <article class="live-provider-panel iflytek-panel" data-live-provider="iflytek">
           <header>
             <div>
-              <span class="provider-mark">x飞同传 (无人声克隆)</span>
-              <h3>iFLYTEK 模型</h3>
+              <span class="provider-mark">某友商同传（无人声克隆）</span>
+              <h3>某友商模型</h3>
             </div>
             <div class="live-header-meta">
               <output data-provider-status>离线</output>
@@ -232,7 +231,7 @@
           <div class="live-text-stack">
             <section>
               <span>识别原文</span>
-              <p data-source-text>开始后对着麦克风说中文，这里会滚动显示x飞返回的源语言识别文本。</p>
+              <p data-source-text>开始后对着麦克风说中文，这里会滚动显示某友商返回的源语言识别文本。</p>
             </section>
             <section>
               <span>翻译结果</span>
@@ -286,8 +285,8 @@
 
             <div class="speech-row iflytek-row" data-line="iflytek" style="--reveal:0">
               <div class="speech-meta">
-                <span>x飞</span>
-                <strong>iFLYTEK</strong>
+                <span>某友商</span>
+                <strong>某友商</strong>
               </div>
               <p class="speech-text" data-copy="This is a test audio. It's used to show the product's performance and user experience.">This is a test audio. It's used to show the product's performance and user experience.</p>
               <output>首字 1.35s</output>
@@ -439,11 +438,11 @@
   </main>
 
   <footer class="footer">
-    <span>Competitor reference: iflyrec.com official product navigation</span>
+    <span>Copyright © AI Voicelink Team</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-<script src="script.js?v=20260805.1"></script>
+<script src="script.js?v=20260825.1"></script>
 </body>
 </html>

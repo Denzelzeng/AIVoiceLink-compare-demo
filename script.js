@@ -1108,7 +1108,7 @@ function setLatencyFinalOutputs(rows) {
   const finalOutputs = {
     source: "音频完成",
     globalvoice: "质量 85.6 / 快 1.7s",
-    iflytek: "质量 80.0 / 慢 1.7s"
+    iflytek: "某友商：质量 80.0 / 慢 1.7s"
   };
 
   rows.forEach((row) => {
@@ -1277,6 +1277,7 @@ function renderVideos(data) {
         <video preload="none" controls playsinline data-vendor="${vendor.id}">
           <source src="${vendor.video}" type="video/mp4">
         </video>
+        ${vendor.id === "iflytek" ? '<div class="video-brand-redaction" aria-label="已隐藏竞品标识">某友商演示录像</div>' : ""}
         <div class="video-placeholder">
           <div>
             <strong>${vendor.shortName} 演示视频</strong>
@@ -1324,7 +1325,7 @@ function renderDemoScript(items) {
       <b>${String(index + 1).padStart(2, "0")}</b>
       <h3>${item.step}</h3>
       <p><strong>全球语：</strong>${item.globalvoice}</p>
-      <p><strong>x飞：</strong>${item.iflytek}</p>
+      <p><strong>某友商：</strong>${item.iflytek}</p>
     </article>
   `).join("");
 }
@@ -1340,7 +1341,7 @@ function renderKpis(data) {
         <span class="delta">${getAdvantage(metric)}</span>
       </header>
       <strong>${formatValue(metric.globalvoice, "")}<small>${metric.unit}</small></strong>
-      <p>${metric.description}；x飞为 ${formatValue(metric.iflytek, metric.unit)}。</p>
+      <p>${metric.description}；某友商为 ${formatValue(metric.iflytek, metric.unit)}。</p>
     </article>
   `).join("");
 }
@@ -1354,7 +1355,7 @@ function renderRadar(data) {
   const angleStep = (Math.PI * 2) / metrics.length;
   const series = [
     { id: "globalvoice", label: "全球语", color: "#1769e0" },
-    { id: "iflytek", label: "x飞", color: "#f97316" }
+    { id: "iflytek", label: "某友商", color: "#f97316" }
   ];
 
   const point = (index, value = max) => {
@@ -1425,7 +1426,7 @@ function renderSpeedChart(data) {
         <span class="bar-value">${formatValue(metric.globalvoice, metric.unit)}</span>
       </div>
       <div class="bar-row">
-        <span>x飞</span>
+        <span>某友商</span>
         <div class="bar-track"><div class="bar-fill" style="--w:${iflytekWidth}%; background:#f97316"></div></div>
         <span class="bar-value">${formatValue(metric.iflytek, metric.unit)}</span>
       </div>
@@ -1481,7 +1482,7 @@ function renderCapabilityMatrix(data) {
         <div class="capability-row">
           <div class="capability-name">${item.name}</div>
           <div><span class="status ${statusMap[item.globalvoice].className}" title="${statusMap[item.globalvoice].text}">${statusMap[item.globalvoice].label}</span> 全球语</div>
-          <div><span class="status ${statusMap[item.iflytek].className}" title="${statusMap[item.iflytek].text}">${statusMap[item.iflytek].label}</span> x飞</div>
+          <div><span class="status ${statusMap[item.iflytek].className}" title="${statusMap[item.iflytek].text}">${statusMap[item.iflytek].label}</span> 某友商</div>
           <div class="capability-note">${item.note}</div>
         </div>
       `).join("")}

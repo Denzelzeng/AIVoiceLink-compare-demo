@@ -380,6 +380,41 @@ h1 {
   object-fit: contain;
 }
 
+.logo-strip .anonymous-competitor {
+  justify-content: center;
+  min-height: 52px;
+}
+
+.anonymous-competitor > span {
+  color: #243b5a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.video-shell {
+  position: relative;
+}
+
+.video-brand-redaction {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  min-width: 154px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 0 0 10px 0;
+  background: #172b4d;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  pointer-events: none;
+}
+
 .versus {
   display: grid;
   place-items: center;
