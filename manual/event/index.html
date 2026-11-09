@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>全球语-会译通 Event｜操作手册</title><style>html,body{margin:0;width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb}[hidden]{display:none!important}iframe{display:block;width:100%;height:100%;border:0}.status{padding:24px;color:#344054}.status a{color:#2457d6}</style></head>
+<body><div class="status" id="status">正在加载会译通 Event 手册…</div><iframe id="manual" title="全球语-会译通 Event 操作手册" hidden></iframe><script>
+(async()=>{const status=document.getElementById('status'),frame=document.getElementById('manual');try{const response=await fetch('../event-source.html');if(!response.ok)throw new Error('unavailable');let html=await response.text();html=html.replaceAll('全球语-会译通','全球语-会译通 Event').replaceAll('AI VoiceLink - Conference','AI VoiceLink - Event').replaceAll('AI VoiceLink Conference','AI VoiceLink Event').replace('<head>','<head><base href="'+new URL('../',location.href).href+'">');frame.srcdoc=html;frame.hidden=false;status.hidden=true;}catch(e){status.textContent='手册加载失败，请检查网络后重试。 / Unable to load the guide. Please check your connection and try again.';}})();
+</script></body></html>

@@ -1,6 +1,6 @@
-# AI Voicelink Conference 竞品对比演示页
+# AI Voicelink Event 竞品对比演示页
 
-用于展示 **AI Voicelink - Conference（页面中展示为「全球语-会译通」）** 与对比产品的会议同传能力、延迟、处理效率和产品工作流。页面既可作为静态演示页使用，也可选择启动本地实时同传后端，直接在浏览器中采集麦克风音频进行模型体验。
+用于展示 **AI Voicelink - Event（页面中展示为「全球语-会译通」）** 与对比产品的会议同传能力、延迟、处理效率和产品工作流。页面既可作为静态演示页使用，也可选择启动本地实时同传后端，直接在浏览器中采集麦克风音频进行模型体验。
 
 > 对比指标、文案、音视频均为项目演示素材。对外发布或更新结论前，请先确认测试样本、数据来源和品牌表述。
 
@@ -24,7 +24,10 @@ compare-demo/
 ├─ images/                       # Logo 与页面图片
 ├─ videos/                       # 对比演示视频
 ├─ manual/
-│  ├─ conference.html             # 会译通客户操作手册（独立 HTML）
+│  ├─ conference.html             # 会译通旧地址（跳转至 Event）
+│  ├─ event/                      # 会译通 Event 操作手册
+│  ├─ event-source.html          # Event 手册内容
+│  ├─ bridge/                    # 语联 Bridge 操作手册
 │  └─ app.html                    # AI VoiceLink App 操作手册（独立 HTML）
 ├─ backend/
 │  ├─ live_demo_server.py        # 浏览器与各同传服务之间的 WebSocket 桥接服务
@@ -35,7 +38,7 @@ compare-demo/
 └─ package.json                  # 前端开发依赖（Playwright）
 ```
 
-`manual/conference.html` 和 `manual/app.html` 均为可独立打开的交互式 HTML 手册，不依赖实时同传后端。发布静态站点时请一并保留 `manual/` 目录。
+Event、App 和 Bridge 手册均不依赖实时同传后端。发布静态站点时请一并保留 `manual/` 目录。
 
 ## 快速启动
 
@@ -125,7 +128,7 @@ IFLYTEK_API_KEY=your_api_key
 ## 部署说明
 
 - 仅展示静态内容时，将项目根目录作为静态站点发布即可；必须保留 `data`、`assets`、`images` 和 `videos` 的相对目录结构。
-- 操作手册需随站点一并发布：会译通手册位于 `/manual/conference.html`，App 手册位于 `/manual/app.html`。
+- 操作手册需随站点一并发布：会译通 Event 手册位于 `/manual/event/`，旧地址 `/manual/conference.html` 会跳转；App 手册位于 `/manual/app.html`，Bridge 手册位于 `/manual/bridge/`。
 - 开启实时同传时，生产环境前端不再连接 `:8765`，而会连接同域的 `ws(s)://<站点>/live`。因此需要由 Nginx、Caddy 或应用网关将 `/live` 的 WebSocket 请求反向代理到 `live_demo_server.py`。
 - 麦克风采集在生产环境应通过 HTTPS 提供；现代浏览器通常只对 `localhost` 放宽该限制。
 - 不要把 `backend/.env`、服务商密钥或内部测试原始资料部署到公开静态站点。
